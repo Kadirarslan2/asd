@@ -1,0 +1,161 @@
+# Model kataloğu — yetenekler, sınırlar ve TAHMİNİ fiyatlar.
+#
+# ÖNEMLİ: Fiyatlar ve model adları sağlayıcılar tarafından sık değiştirilir. Buradaki
+# değerler başlangıç değeridir; ilk ücretli üretimden önce sağlayıcının güncel fiyat
+# sayfasıyla karşılaştırıp gerekirse düzeltin. Maliyet tahmini ve onay ekranı bu
+# dosyadan hesaplanır. Çalışma klasörünüze "catalog.yaml" koyarsanız (veya
+# STUDIO_CATALOG ortam değişkeni ile) bu dosyanın yerine o kullanılır.
+#
+# Alanlar:
+#   modes        : text (metinden), image (görselden), video (referans videodan)
+#   references   : desteklenen referans görsel sayısı (karakter/mekân tutarlılığı)
+#   aspects      : modelin doğrudan ürettiği en-boy oranları
+#   durations    : izin verilen klip süreleri (saniye)
+#   resolutions  : doğal çıktı çözünürlükleri
+#   usd_per_sec  : çözünürlüğe göre saniye başı tahmini ABD doları
+
+video:
+  veo:
+    label: Google Veo (Gemini API)
+    env: [GEMINI_API_KEY]
+    base_url: https://generativelanguage.googleapis.com/v1beta
+    default_model: veo-3.1-fast
+    max_prompt_chars: 4000
+    models:
+      veo-3.1:
+        api_model: veo-3.1-generate-preview
+        modes: [text, image]
+        references: 3
+        aspects: ["16:9", "9:16"]
+        durations: [4, 6, 8]
+        resolutions: ["720p", "1080p", "4k"]
+        hires_duration: 8          # 1080p ve 4k yalnızca 8 sn kliplerde
+        native_audio: true
+        usd_per_sec: {"720p": 0.40, "1080p": 0.40, "4k": 0.60}
+      veo-3.1-fast:
+        api_model: veo-3.1-fast-generate-preview
+        modes: [text, image]
+        references: 0
+        aspects: ["16:9", "9:16"]
+        durations: [4, 6, 8]
+        resolutions: ["720p", "1080p", "4k"]
+        hires_duration: 8
+        native_audio: true
+        usd_per_sec: {"720p": 0.15, "1080p": 0.15, "4k": 0.35}
+
+  runway:
+    label: Runway
+    env: [RUNWAYML_API_SECRET]
+    base_url: https://api.dev.runwayml.com
+    api_version: "2024-11-06"
+    default_model: gen4.5
+    max_prompt_chars: 1000
+    upscale: {api_model: upscale_v1, usd_per_sec: 0.02}   # 4K'ya yükseltme
+    models:
+      gen4.5:
+        api_model: gen4.5
+        modes: [text, image]
+        references: 0
+        aspects: ["16:9", "9:16", "1:1"]
+        ratio_map: {"16:9": "1280:720", "9:16": "720:1280", "1:1": "960:960"}
+        durations: [5, 10]
+        resolutions: ["720p"]
+        upscale_4k: true
+        usd_per_sec: {"720p": 0.12}
+      gen4_turbo:
+        api_model: gen4_turbo
+        modes: [image]
+        references: 0
+        aspects: ["16:9", "9:16", "1:1"]
+        ratio_map: {"16:9": "1280:720", "9:16": "720:1280", "1:1": "960:960"}
+        durations: [5, 10]
+        resolutions: ["720p"]
+        upscale_4k: true
+        usd_per_sec: {"720p": 0.05}
+      gen4_aleph:                 # referans videodan video (video → video)
+        api_model: gen4_aleph
+        modes: [video]
+        references: 1
+        aspects: ["16:9", "9:16", "1:1"]
+        ratio_map: {"16:9": "1280:720", "9:16": "720:1280", "1:1": "960:960"}
+        durations: [5]
+        resolutions: ["720p"]
+        upscale_4k: true
+        usd_per_sec: {"720p": 0.15}
+
+  kling:
+    label: Kling AI
+    env: [KLING_ACCESS_KEY, KLING_SECRET_KEY]
+    base_url: https://api-singapore.klingai.com
+    default_model: kling-v2-5-turbo-pro
+    max_prompt_chars: 2500
+    models:
+      kling-v2-5-turbo-pro:
+        api_model: kling-v2-5-turbo
+        api_mode: pro
+        modes: [text, image]
+        references: 0
+        aspects: ["16:9", "9:16", "1:1"]
+        durations: [5, 10]
+        resolutions: ["1080p"]
+        usd_per_sec: {"1080p": 0.07}
+      kling-v2-1-pro:
+        api_model: kling-v2-1
+        api_mode: pro
+        modes: [image]
+        references: 0
+        aspects: ["16:9", "9:16", "1:1"]
+        durations: [5, 10]
+        resolutions: ["1080p"]
+        usd_per_sec: {"1080p": 0.098}
+      kling-v2-1-std:
+        api_model: kling-v2-1
+        api_mode: std
+        modes: [image]
+        references: 0
+        aspects: ["16:9", "9:16", "1:1"]
+        durations: [5, 10]
+        resolutions: ["720p"]
+        usd_per_sec: {"720p": 0.056}
+      kling-v2-1-master:
+        api_model: kling-v2-1-master
+        modes: [text, image]
+        references: 0
+        aspects: ["16:9", "9:16", "1:1"]
+        durations: [5, 10]
+        resolutions: ["1080p"]
+        usd_per_sec: {"1080p": 0.28}
+
+  mock:                            # Ücretsiz, çevrimdışı test üreticisi (FFmpeg ile)
+    label: Mock (ücretsiz test)
+    env: []
+    default_model: mock
+    max_prompt_chars: 100000
+    models:
+      mock:
+        modes: [text, image, video]
+        references: 8
+        aspects: ["16:9", "9:16", "1:1"]
+        durations: [2, 3, 4, 5, 6, 8, 10]
+        resolutions: ["720p", "1080p"]
+        usd_per_sec: {"720p": 0.0, "1080p": 0.0}
+
+audio:
+  elevenlabs:
+    env: [ELEVENLABS_API_KEY]
+    base_url: https://api.elevenlabs.io
+    default_tts_model: eleven_multilingual_v2
+    # Aşağıdaki sesi kendi ElevenLabs hesabınızdaki bir Türkçe sesle değiştirin:
+    #   studio voices
+    default_voice_id: ""
+    output_format: mp3_44100_192
+    tts_models:                    # 1000 karakter başı tahmini USD (plana göre değişir)
+      eleven_multilingual_v2: {usd_per_1k_chars: 0.30}
+      eleven_v3: {usd_per_1k_chars: 0.30}
+      eleven_flash_v2_5: {usd_per_1k_chars: 0.15, language_code: true}
+      eleven_turbo_v2_5: {usd_per_1k_chars: 0.15, language_code: true}
+    sfx: {usd_per_sec: 0.012, max_seconds: 22}
+
+llm:
+  model: claude-opus-5-5
+  usd_estimate_per_storyboard: 0.25

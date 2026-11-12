@@ -1,0 +1,117 @@
+title: İstanbul'da Bir Sabah
+logline: Genç bir fotoğrafçı, şehrin uyanışını Galata'dan Boğaz'a uzanan bir yürüyüşte yakalar.
+language: tr
+aspect: '16:9'
+resolution: 1080p
+fps: 24
+provider: veo
+model: null
+seed: 4217
+style:
+  look: cinematic documentary realism, shot on ARRI Alexa 35, soft Kodak 2383 film print color, gentle halation
+  grade: cinematic
+  grain: 4
+  vignette: true
+  sharpen: false
+audio:
+  voice_id: null          # studio voices ile seçip buraya yazın
+  narration_volume: 1.0
+  ambience_volume: 0.35
+  clip_audio_volume: 0.0
+  music: null
+  music_volume: 0.25
+  ducking: true
+  lufs: -14.0
+  fit_to_voice: true
+characters:
+- id: elif
+  name: Elif
+  appearance: a 27-year-old Turkish woman with an oval face, warm olive skin, dark brown almond eyes, defined eyebrows, shoulder-length wavy dark brown hair parted in the middle, slim build, about 168 cm tall
+  wardrobe: a camel wool overcoat worn open over a cream ribbed turtleneck, dark indigo straight-leg jeans, white leather sneakers, a black Leica rangefinder camera on a brown leather strap around her neck
+  reference_images: []
+locations:
+- id: galata
+  name: Galata sokakları
+  description: a narrow cobblestone street in Galata, Istanbul at dawn, weathered pastel 19th-century apartment facades with iron balconies, the stone Galata Tower rising at the end of the street, wet cobblestones, a red vintage tram sign, closed wooden shop shutters
+  reference_images: []
+- id: bogaz
+  name: Karaköy iskelesi
+  description: the Karaköy ferry pier on the Bosphorus at sunrise, white and yellow passenger ferries, seagulls, calm silver-blue water, the silhouette of mosques and minarets on the far shore in golden haze
+  reference_images: []
+scenes:
+- id: s01
+  title: Şehir uyanıyor
+  duration: 6
+  location: galata
+  characters: []
+  action: Dawn breaks over the empty street as the first sunlight touches the top of the Galata Tower and a flock of pigeons lifts off the rooftops
+  camera:
+    shot_size: extreme wide establishing shot
+    angle: high angle
+    movement: slow aerial descent and push in toward the tower
+    lens: 24mm, f/8, deep focus
+  lighting: cool blue pre-dawn ambient light with a warm orange rim of first sun on the tower top
+  atmosphere: quiet, misty, expectant
+  motion: pigeons take off with realistic wing beats, thin mist drifts slowly along the street
+  vfx: subtle volumetric morning haze
+  narration: İstanbul, her sabah yeniden doğar.
+  ambience: quiet city dawn, distant seagulls, soft wind, faraway ferry horn
+  transition: {type: dissolve, duration: 0.8}
+  mode: text
+- id: s02
+  title: Elif yola çıkıyor
+  duration: 6
+  location: galata
+  characters: [elif]
+  action: Elif walks down the cobblestone street toward the camera, glancing up at the balconies with a small smile
+  camera:
+    shot_size: medium shot
+    angle: eye level
+    movement: smooth steadicam tracking backward in front of her
+    lens: 35mm, f/2.0, shallow depth of field
+  lighting: soft golden side light from the low sun, gentle bounce fill from the pale facades
+  atmosphere: warm, intimate, unhurried
+  motion: natural relaxed walking pace, coat hem swaying with each step, hair moving slightly in the breeze
+  vfx: ''
+  narration: Elif için en güzel ışık, şehrin henüz konuşmadığı bu saatlerde saklı.
+  ambience: footsteps on wet cobblestones, distant tram bell, morning birds
+  transition: {type: cut, duration: 0.5}
+  mode: text
+- id: s03
+  title: Deklanşör
+  duration: 4
+  location: galata
+  characters: [elif]
+  action: Elif raises the Leica to her eye, adjusts the focus ring with her fingers and presses the shutter
+  camera:
+    shot_size: close-up
+    angle: slightly low angle
+    movement: slow dolly in
+    lens: 85mm, f/1.8, creamy bokeh
+  lighting: warm key light on her face from camera left, soft sparkle reflections in the lens glass
+  atmosphere: focused, tender
+  motion: precise small hand movements, a single blink after the shutter click
+  vfx: ''
+  narration: ''
+  ambience: mechanical camera shutter click, quiet street ambience
+  transition: {type: cut, duration: 0.5}
+  mode: text
+- id: s04
+  title: Boğaz'a doğru
+  duration: 8
+  location: bogaz
+  characters: [elif]
+  action: Elif stands at the edge of the pier watching a ferry glide past while seagulls circle overhead, then lowers her camera and breathes in the sea air
+  camera:
+    shot_size: wide shot
+    angle: low angle
+    movement: slow crane up and pull back revealing the Bosphorus
+    lens: 28mm, f/4
+  lighting: backlit golden sunrise with strong rim light on her hair and coat, sun glitter on the water
+  atmosphere: open, hopeful, majestic
+  motion: ferry moves steadily leaving a realistic wake, seagulls glide and flap, her coat flutters in the sea breeze
+  vfx: gentle anamorphic lens flare from the sun
+  narration: Ve Boğaz, her zamanki gibi, bütün hikâyeleri sabırla dinler.
+  ambience: seagulls, gentle waves against the pier, ferry engine passing, sea breeze
+  transition: {type: fadeblack, duration: 0.8}
+  mode: text
