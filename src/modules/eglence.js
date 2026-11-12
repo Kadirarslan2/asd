@@ -55,7 +55,7 @@ async function duelloBitir(i, d, kazananId, ms) {
 function aimIzgara(a) {
   return [0, 1, 2, 3].map((r) => satir(...[0, 1, 2, 3, 4].map((c) => {
     const n = r * 5 + c;
-    return n === a.hedef ? buton(`aim:${a.uid}:${n}`, '🎯', ButtonStyle.Danger) : buton(`aim:${a.uid}:${n}`, '​', ButtonStyle.Secondary);
+    return n === a.hedef ? buton(`aim:${a.uid}:${n}`, '🎯', ButtonStyle.Danger) : buton(`aim:${a.uid}:${n}`, '▪', ButtonStyle.Secondary);
   })));
 }
 
