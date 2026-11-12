@@ -1,9 +1,8 @@
-echo off
-cls
+@echo off
+title KampAtes Bot
+if not exist node_modules call npm install
 :A
-color c
-echo Bu Bot maXoz tarafindan kodlandi.
-echo Bot aciliyor.
-
-node index.js
+node src/index.js
+echo Bot kapandi, 5 saniye sonra yeniden baslatiliyor...
+timeout /t 5 >nul
 goto A
