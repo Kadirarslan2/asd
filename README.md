@@ -23,7 +23,7 @@ Gereken: **Node.js 22.13 veya üstü**.
 6. Botun rolünü rol listesinde **yukarı taşı** (yönettiği rollerin üstünde olmalı).
 
 ### Müzik için
-Ek kurulum gerekmez: ffmpeg paketle birlikte gelir. Şarkı adıyla/YouTube'dan çalmak için bot ilk kullanımda **yt-dlp** programını GitHub'daki resmî sürümünden `data/bin` klasörüne kendisi indirir (Linux'ta `python3` kurulu olmalı). Bunu istemiyorsan `.env` içine `YTDLP_OTOMATIK_INDIR=0` yaz; radyolar ve doğrudan ses linkleri yine çalışır.
+Ek kurulum gerekmez: ffmpeg paketle birlikte gelir. Şarkı adıyla/YouTube'dan çalmak için bot ilk kullanımda **yt-dlp** programını GitHub'daki resmî sürümünden `data/bin` klasörüne kendisi indirir. Bunu istemiyorsan `.env` içine `YTDLP_OTOMATIK_INDIR=0` yaz; radyolar ve doğrudan ses linkleri yine çalışır.
 
 ### İsteğe bağlı anahtarlar
 | Değişken | Ne için | Nereden |
