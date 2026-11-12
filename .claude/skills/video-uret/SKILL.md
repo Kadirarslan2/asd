@@ -59,3 +59,18 @@ servisin hazır olmadığını tek cümleyle söyle. Hiçbir video sağlayıcıs
 - Üretim yarıda kesilirse aynı komutu tekrar çalıştır: görev kimliği saklıdır, ikinci kez
   ücret alınmaz.
 - Ayrıntı: `ai-video-studio/README.md`.
+
+## Ücretsiz yol: kodla animasyon
+
+Kullanıcı para harcamak istemiyorsa veya gerçekçi görüntü gerekmiyorsa (tanıtım, duyuru,
+bilgi videosu), ücretli sağlayıcı kullanma. HTML/CSS/SVG animasyonu yaz ve
+`ai-video-studio/motion/render.js` ile MP4'e çevir:
+
+```bash
+node motion/render.js <sayfa.html> <çıktı.mp4> <süre_sn> [genişlik] [yükseklik] [fps] ["firma=..&tel=.."]
+```
+
+Tüm hareketler CSS animasyonu olmalı (betik kareleri `currentTime` ile ilerletir);
+gecikmeler videonun başından itibaren mutlak milisaniyedir. Örnek:
+`motion/cam-balkon/index.html`. Bu yolla gerçekçi insan/mekân görüntüsü ve seslendirme
+üretilemez; bunu kullanıcıya açıkça söyle.

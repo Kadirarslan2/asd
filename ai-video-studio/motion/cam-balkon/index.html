@@ -1,0 +1,187 @@
+<!doctype html><html lang="tr"><meta charset="utf-8">
+<style>
+:root{--navy:#0a1626;--navy2:#12263d;--amber:#ffb547;--glass:#9fd8ff;--ink:#f4f7fb;--mut:#9fb2c8}
+*{box-sizing:border-box;margin:0}
+html,body{width:1080px;height:1920px;overflow:hidden;background:var(--navy);color:var(--ink);
+  font-family:"Inter Display","Inter",system-ui,sans-serif}
+.scene{position:absolute;inset:0;opacity:0;animation:show var(--len) linear both;animation-delay:var(--at)}
+.scene.last{animation-name:showlast}
+@keyframes show{0%{opacity:0}7%{opacity:1}93%{opacity:1}100%{opacity:0}}
+@keyframes showlast{0%{opacity:0}8%{opacity:1}100%{opacity:1}}
+.in{animation:rise .8s cubic-bezier(.16,.84,.24,1) both;animation-delay:var(--d)}
+@keyframes rise{from{opacity:0;transform:translateY(60px)}to{opacity:1;transform:none}}
+.pop{animation:pop .7s cubic-bezier(.2,1.4,.3,1) both;animation-delay:var(--d)}
+@keyframes pop{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:none}}
+.bg{position:absolute;inset:0;background:radial-gradient(1200px 900px at 50% 18%,#1d3c5e 0%,var(--navy2) 45%,var(--navy) 100%)}
+.eyebrow{font-weight:700;font-size:34px;letter-spacing:.22em;color:var(--amber)}
+h1{font-weight:800;font-size:112px;line-height:1.02;letter-spacing:-.025em}
+h2{font-weight:800;font-size:88px;line-height:1.05;letter-spacing:-.02em}
+.amber{color:var(--amber)}
+.pad{position:absolute;left:80px;right:80px}
+
+/* 1 — kahraman sahne */
+#s1 .title{top:150px}
+#s1 svg{position:absolute;left:60px;top:650px;width:960px;height:1000px}
+.panel{animation:slide 1s cubic-bezier(.3,.9,.3,1) both;animation-delay:var(--d)}
+@keyframes slide{from{transform:translateX(-760px)}to{transform:none}}
+.glow{animation:fade 1.2s ease both;animation-delay:4200ms}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.leaf{transform-origin:50% 100%;transform-box:fill-box;animation:sway .5s ease-in-out infinite alternate,calm 1ms linear both;animation-delay:0ms,4000ms}
+@keyframes sway{from{rotate:-9deg}to{rotate:10deg}}
+@keyframes calm{to{animation-play-state:paused}}
+.drop{animation:fall var(--t) linear infinite;animation-delay:var(--o)}
+@keyframes fall{from{transform:translate(60px,-200px)}to{transform:translate(-60px,1250px)}}
+#s1 .tag{top:1690px;text-align:center;font-size:44px;font-weight:600;color:var(--mut)}
+
+/* 2 — faydalar */
+#s2 .head{top:250px}
+.cards{position:absolute;left:80px;right:80px;top:700px;display:grid;gap:52px}
+.card{display:flex;gap:40px;align-items:center;padding:48px;border-radius:40px;
+  background:linear-gradient(135deg,rgba(159,216,255,.14),rgba(159,216,255,.04));border:2px solid rgba(159,216,255,.28)}
+.ico{flex:none;width:150px;height:150px;border-radius:36px;background:var(--amber);display:grid;place-items:center}
+.ico svg{width:88px;height:88px;stroke:var(--navy);fill:none;stroke-width:7;stroke-linecap:round;stroke-linejoin:round}
+.card b{display:block;font-size:56px;font-weight:800;letter-spacing:-.01em}
+.card span{display:block;font-size:38px;color:var(--mut);margin-top:10px;line-height:1.25}
+
+/* 3 — süreç */
+#s3 .head{top:250px}
+.steps{position:absolute;left:80px;right:80px;top:780px;display:grid;gap:90px}
+.step{display:flex;gap:44px;align-items:center}
+.num{flex:none;width:140px;height:140px;border-radius:50%;border:5px solid var(--amber);color:var(--amber);
+  display:grid;place-items:center;font-size:68px;font-weight:800}
+.step b{font-size:62px;font-weight:800;letter-spacing:-.01em}
+.step span{display:block;font-size:38px;color:var(--mut);margin-top:8px}
+.line{position:absolute;left:148px;top:920px;width:5px;height:460px;background:rgba(255,181,71,.35);transform-origin:top;
+  animation:grow 1.6s ease both;animation-delay:12600ms}
+@keyframes grow{from{transform:scaleY(0)}to{transform:none}}
+
+/* 4 — çağrı */
+#s4{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 80px}
+.logo{width:230px;height:230px;border-radius:56px;background:var(--amber);display:grid;place-items:center;margin-bottom:60px}
+.logo svg{width:150px;height:150px}
+.firm{font-size:104px;font-weight:800;letter-spacing:-.02em;line-height:1.05}
+.sub{font-size:46px;color:var(--mut);margin-top:22px;letter-spacing:.14em;font-weight:600}
+.cta{margin-top:110px;font-size:58px;font-weight:700}
+.phone{margin-top:44px;padding:44px 70px;border-radius:999px;background:var(--amber);color:var(--navy);
+  font-size:84px;font-weight:800;letter-spacing:.01em;animation:pop .7s cubic-bezier(.2,1.4,.3,1) both,pulse 1.4s ease-in-out infinite;animation-delay:18600ms,19400ms}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,181,71,.55)}50%{box-shadow:0 0 0 44px rgba(255,181,71,0)}}
+.city{margin-top:60px;font-size:42px;color:var(--mut)}
+</style>
+<body>
+<div class="bg"></div>
+
+<!-- 1 -->
+<section class="scene" id="s1" style="--at:0ms;--len:5800ms">
+  <div class="pad title">
+    <div class="eyebrow in" style="--d:200ms">CAM BALKON SİSTEMLERİ</div>
+    <h1 class="in" style="--d:500ms;margin-top:34px">Balkonunuz</h1>
+    <h1 class="in amber" style="--d:800ms">dört mevsim</h1>
+    <h1 class="in" style="--d:1100ms">sizin olsun.</h1>
+  </div>
+  <svg viewBox="0 0 960 1000">
+    <defs>
+      <clipPath id="open"><rect x="130" y="150" width="700" height="430"/></clipPath>
+      <linearGradient id="gl" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#cfeeff" stop-opacity=".42"/><stop offset=".5" stop-color="#9fd8ff" stop-opacity=".14"/>
+        <stop offset="1" stop-color="#cfeeff" stop-opacity=".3"/></linearGradient>
+      <radialGradient id="warm" cx=".5" cy=".55" r=".7"><stop offset="0" stop-color="#ffcf7a" stop-opacity=".95"/>
+        <stop offset="1" stop-color="#ff9a3c" stop-opacity=".15"/></radialGradient>
+    </defs>
+    <!-- cephe -->
+    <rect x="40" y="40" width="880" height="920" rx="26" fill="#22364d"/>
+    <rect x="40" y="40" width="880" height="70" rx="26" fill="#2b435e"/>
+    <!-- balkon içi -->
+    <rect x="130" y="150" width="700" height="590" fill="#0d1a2a"/>
+    <g clip-path="url(#open)">
+      <rect x="130" y="150" width="700" height="430" fill="url(#warm)" class="glow"/>
+      <!-- balkon kapısı -->
+      <rect x="520" y="230" width="210" height="350" rx="8" fill="#16283c" stroke="#3b5674" stroke-width="6"/>
+      <rect x="520" y="230" width="210" height="350" rx="8" fill="#ffd58a" opacity=".85" class="glow"/>
+      <line x1="625" y1="230" x2="625" y2="580" stroke="#3b5674" stroke-width="6"/>
+      <!-- lamba -->
+      <line x1="300" y1="150" x2="300" y2="250" stroke="#5c7591" stroke-width="5"/>
+      <path d="M262 290 L338 290 L318 250 L282 250 Z" fill="#5c7591"/>
+      <circle cx="300" cy="300" r="46" fill="#ffe2a6" opacity=".9" class="glow"/>
+      <!-- bitki -->
+      <g>
+        <path class="leaf" d="M225 580 C190 500 205 430 232 400 C252 450 252 520 240 580 Z" fill="#3fae7a"/>
+        <path class="leaf" d="M240 580 C250 480 290 430 322 420 C318 490 290 540 258 580 Z" fill="#2f9468" style="animation-duration:.42s,1ms"/>
+        <path class="leaf" d="M226 580 C170 540 150 480 152 450 C200 470 228 520 240 580 Z" fill="#48c088" style="animation-duration:.58s,1ms"/>
+      </g>
+      <!-- sandalye sırtı -->
+      <rect x="390" y="470" width="90" height="110" rx="14" fill="#31485f"/>
+    </g>
+    <!-- cam paneller -->
+    <g clip-path="url(#open)">
+      <g class="panel" style="--d:3300ms"><rect x="133" y="153" width="172" height="424" fill="url(#gl)" stroke="#e6f1fa" stroke-width="6"/><line x1="160" y1="430" x2="270" y2="200" stroke="#fff" stroke-opacity=".35" stroke-width="8"/></g>
+      <g class="panel" style="--d:2900ms"><rect x="307" y="153" width="172" height="424" fill="url(#gl)" stroke="#e6f1fa" stroke-width="6"/><line x1="334" y1="430" x2="444" y2="200" stroke="#fff" stroke-opacity=".35" stroke-width="8"/></g>
+      <g class="panel" style="--d:2500ms"><rect x="481" y="153" width="172" height="424" fill="url(#gl)" stroke="#e6f1fa" stroke-width="6"/><line x1="508" y1="430" x2="618" y2="200" stroke="#fff" stroke-opacity=".35" stroke-width="8"/></g>
+      <g class="panel" style="--d:2100ms"><rect x="655" y="153" width="172" height="424" fill="url(#gl)" stroke="#e6f1fa" stroke-width="6"/><line x1="682" y1="430" x2="792" y2="200" stroke="#fff" stroke-opacity=".35" stroke-width="8"/></g>
+    </g>
+    <!-- raylar, korkuluk, döşeme -->
+    <rect x="122" y="140" width="716" height="14" rx="4" fill="#dfe9f2"/>
+    <rect x="122" y="574" width="716" height="14" rx="4" fill="#dfe9f2"/>
+    <rect x="130" y="588" width="700" height="152" fill="#33506f"/>
+    <g stroke="#2a4460" stroke-width="5"><line x1="305" y1="588" x2="305" y2="740"/><line x1="480" y1="588" x2="480" y2="740"/><line x1="655" y1="588" x2="655" y2="740"/></g>
+    <rect x="100" y="740" width="760" height="34" rx="8" fill="#48688a"/>
+    <!-- yağmur -->
+    <g id="rain" stroke="#bfe3ff" stroke-linecap="round"></g>
+  </svg>
+  <div class="pad tag in" style="--d:4300ms">Yağmur dışarıda, keyif içeride.</div>
+</section>
+
+<!-- 2 -->
+<section class="scene" id="s2" style="--at:5600ms;--len:6200ms">
+  <div class="pad head">
+    <div class="eyebrow in" style="--d:5900ms">NEDEN CAM BALKON?</div>
+    <h2 class="in" style="--d:6150ms;margin-top:30px">Evinize bir oda<br><span class="amber">daha</span> kazandırın.</h2>
+  </div>
+  <div class="cards">
+    <div class="card in" style="--d:6900ms"><div class="ico"><svg viewBox="0 0 48 48"><path d="M24 6v24"/><circle cx="24" cy="36" r="7"/><path d="M34 12h6M34 20h6"/></svg></div>
+      <div><b>Isı yalıtımı</b><span>Kışın sıcak, yazın serin</span></div></div>
+    <div class="card in" style="--d:7400ms"><div class="ico"><svg viewBox="0 0 48 48"><path d="M8 20v8h8l10 8V12l-10 8z"/><path d="M34 16l8 16M42 16l-8 16"/></svg></div>
+      <div><b>Ses yalıtımı</b><span>Sokak gürültüsü dışarıda kalır</span></div></div>
+    <div class="card in" style="--d:7900ms"><div class="ico"><svg viewBox="0 0 48 48"><path d="M24 5l15 6v11c0 10-6 17-15 21C15 39 9 32 9 22V11z"/><path d="M17 24l5 5 9-10"/></svg></div>
+      <div><b>Tam koruma</b><span>Yağmur, toz ve rüzgâra karşı</span></div></div>
+  </div>
+</section>
+
+<!-- 3 -->
+<section class="scene" id="s3" style="--at:11600ms;--len:6000ms">
+  <div class="pad head">
+    <div class="eyebrow in" style="--d:11900ms">NASIL ÇALIŞIYORUZ?</div>
+    <h2 class="in" style="--d:12150ms;margin-top:30px">Ölçüden montaja<br><span class="amber">tek adres.</span></h2>
+  </div>
+  <div class="line"></div>
+  <div class="steps">
+    <div class="step"><div class="num pop" style="--d:12700ms;background:var(--navy)">1</div><div class="in" style="--d:12850ms"><b>Ücretsiz keşif</b><span>Yerinde ölçü ve fiyat</span></div></div>
+    <div class="step"><div class="num pop" style="--d:13400ms;background:var(--navy)">2</div><div class="in" style="--d:13550ms"><b>Size özel üretim</b><span>Katlanır veya sürgülü sistem</span></div></div>
+    <div class="step"><div class="num pop" style="--d:14100ms;background:var(--navy)">3</div><div class="in" style="--d:14250ms"><b>Temiz montaj</b><span>Uzman ekip, titiz işçilik</span></div></div>
+  </div>
+</section>
+
+<!-- 4 -->
+<section class="scene last" id="s4" style="--at:17400ms;--len:5000ms">
+  <div class="logo pop" style="--d:17600ms"><svg viewBox="0 0 48 48" fill="none" stroke="#0a1626" stroke-width="3.5" stroke-linejoin="round"><rect x="6" y="8" width="36" height="26"/><path d="M15 8v26M24 8v26M33 8v26M4 34h40v6H4z"/></svg></div>
+  <div class="firm in" id="firm" style="--d:17900ms">FİRMA ADINIZ</div>
+  <div class="sub in" style="--d:18100ms">CAM BALKON SİSTEMLERİ</div>
+  <div class="cta in" style="--d:18400ms">Ücretsiz keşif için <span class="amber">hemen arayın</span></div>
+  <div class="phone" id="phone">0 5XX XXX XX XX</div>
+  <div class="city in" id="city" style="--d:19000ms"></div>
+</section>
+
+<script>
+// yağmur: sabit tohumlu rastgele damlalar
+let s=7;const r=()=>(s=(s*16807)%2147483647)/2147483647;
+const g=document.getElementById('rain');
+for(let i=0;i<70;i++){const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+  const x=r()*1050-40,len=26+r()*30;l.setAttribute('x1',x);l.setAttribute('y1',0);l.setAttribute('x2',x-len*.09);l.setAttribute('y2',len);
+  l.setAttribute('stroke-width',2+r()*2);l.setAttribute('stroke-opacity',.25+r()*.4);l.classList.add('drop');
+  l.style.setProperty('--t',(650+r()*500)+'ms');l.style.setProperty('--o',(-r()*1200)+'ms');g.appendChild(l);}
+// firma bilgileri: ?firma=...&tel=...&sehir=...
+const q=new URLSearchParams(location.search);
+if(q.get('firma'))document.getElementById('firm').textContent=q.get('firma');
+if(q.get('tel'))document.getElementById('phone').textContent=q.get('tel');
+if(q.get('sehir'))document.getElementById('city').textContent=q.get('sehir');
+</script>
+</body></html>
