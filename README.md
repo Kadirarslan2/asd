@@ -22,6 +22,9 @@ Gereken: **Node.js 22.13 veya üstü**.
 5. Sunucuda **`/kurulum`** yaz: gerekli kanalları, cezalı rolünü ve "Oda Oluştur" / "Kamp Ateşi" ses kanallarını kendisi kurar.
 6. Botun rolünü rol listesinde **yukarı taşı** (yönettiği rollerin üstünde olmalı).
 
+### Müzik için
+Ek kurulum gerekmez: ffmpeg paketle birlikte gelir. Şarkı adıyla/YouTube'dan çalmak için bot ilk kullanımda **yt-dlp** programını GitHub'daki resmî sürümünden `data/bin` klasörüne kendisi indirir (Linux'ta `python3` kurulu olmalı). Bunu istemiyorsan `.env` içine `YTDLP_OTOMATIK_INDIR=0` yaz; radyolar ve doğrudan ses linkleri yine çalışır.
+
 ### İsteğe bağlı anahtarlar
 | Değişken | Ne için | Nereden |
 |---|---|---|
@@ -34,14 +37,22 @@ Gereken: **Node.js 22.13 veya üstü**.
 ## Özellikler
 
 ### 🔥 Kamp ateşi (3D)
-- `/kamp aç` — bulunduğun ses kanalının 3D sahnesi (kişiye özel imzalı bağlantı)
+- **Komut yazmaya gerek yok:** bir ses kanalına girince kanalın sohbetine kendiliğinden resimli kamp kartı düşer (kim ateş başında, ateş ne durumda, ne çalıyor). Karttaki butonlarla 3D sahne açılır, odun atılır, hatıra fotoğrafı çekilir, menüden radyo açılır. `/kamp otomatik` ile kapatılabilir
+- `/kamp aç` — aynı 3D bağlantıyı komutla verir (kişiye özel imzalı bağlantı)
 - Avatarlar Discord profil fotoğrafı, rol rengi, seviye, FACEIT seviyesi ve klan etiketiyle görünür; susturma/sağırlaştırma/yayın simgeleri canlıdır
 - İfadeler: selam, alkış, dans, odun at, marshmallow kızart, korku hikâyesi (ateş yeşile döner)
 - **Sunucu ateşi:** seste zaman geçtikçe ve odun atıldıkça büyür, kimse yokken söner. Her gün seste biri olursa **ateş serisi** uzar (`/kamp durum`)
 
+### 🎵 Müzik
+- `/müzik çal` — şarkı adı, YouTube linki/listesi ya da ses dosyası linki. `/müzik radyo` — canlı radyolar
+- Resimli "şimdi çalıyor" kartı ve butonlar: duraklat, geç, döngü, karıştır, durdur, ses, sıra
+- Müzik çalarken 3D sahnede ateşin yanında radyo belirir, herkes kafa sallar
+
 ### 🎯 Oyun
-- `/faceit profil | maçlar | karşılaştır | bağla | sıralama | roller` — CS2 ELO, seviye, K/D, harita istatistikleri
-- **Maç takibi:** hesabını bağlayanların biten maçları kanala düşer (ELO farkı, seviye atlama). 3 mağlubiyet üst üste gelince **tilt alarmı** verir
+- `/faceit profil` — resimli profil kartı (ELO, seviye, K/D, haritalar) ve butonlar
+- **Skor tablosu:** bir maçtaki 10 oyuncunun tamamı (K/D/A, K/D, ADR, HS%, MVP, ACE) tek resimde; sunucu üyeleri vurgulanır. `/faceit maçlar` menüsünden ya da profildeki butondan açılır
+- **Maç takibi:** hesabını bağlayanların biten maçları skor tablosuyla birlikte kanala düşer (ELO farkı, seviye atlama). 3 mağlubiyet üst üste gelince **tilt alarmı** verir
+- `/faceit karşılaştır | bağla | sıralama | roller`
 - Otomatik **FACEIT 1-10 rolleri**
 - `/oyun-sunucu sorgula | panel` — CS2/Source ve Minecraft sunucu durumu; her dakika güncellenen canlı panel
 - `/steam` — seviye, CS2 saati, VAC durumu
@@ -54,7 +65,8 @@ Gereken: **Node.js 22.13 veya üstü**.
 - `/ödül koy` — **ödül avı**: birinin başına ödül koy, onu `/düello`'da yenen alır
 
 ### 📈 Seviye, ekonomi, eğlence
-- Mesaj ve ses XP'si, seviye rolleri, `/profil`, 7 farklı `/sıralama`
+- Mesaj ve ses XP'si, seviye rolleri; resimli `/profil` kartı, menüden türü değişen resimli `/sıralama`, resimli seviye atlama ve hoş geldin kartları
+- **Haftanın karnesi:** her pazar akşamı haftanın en çok yazanı, seste en çok duranı ve en çok XP kazananı tek resimde; birincilere ödül
 - **Günlük görevler** (her üyeye her gün 3 farklı) ve 20 **başarım**
 - `/günlük` (seri bonuslu), `/çalış`, `/gönder`, `/market` (rol satışı, 2x XP), `/kumar slot | yazıtura | blackjack`
 - `/düello` (refleks), `/aim` (aim antrenmanı), `/trivia`, `/tkm`, sayı sayma ve kelime zinciri kanalları
@@ -73,6 +85,7 @@ Tüm komutlar için sunucuda `/yardım` yaz.
 ```
 npm test                      # Discord'a bağlanmadan duman testleri
 node test/kamp-onizleme.js    # 3D sahneyi sahte üyelerle tarayıcıda aç
+node test/kart-onizleme.js    # tüm resim kartlarını örnek veriyle data/onizleme klasörüne çiz
 ```
 Yapı: `src/core` (veritabanı, oyuncu servisi, yardımcılar), `src/modules` (her özellik bir dosya; komut/buton/olay tanımları), `src/web` (kamp ateşi sunucusu ve Three.js istemcisi). Veriler `data/bot.sqlite` dosyasında tutulur.
 

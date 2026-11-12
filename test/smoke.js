@@ -4,7 +4,7 @@ process.env.SORGU_OZEL_IZIN = '1';
 const assert = require('node:assert/strict');
 const dgram = require('node:dgram');
 const net = require('node:net');
-const { MessageFlags } = require('discord.js');
+const { MessageFlags, Collection } = require('discord.js');
 const { modulleriYukle } = require('../src/index');
 const db = require('../src/core/db');
 const oyuncu = require('../src/core/oyuncu');
@@ -180,6 +180,38 @@ const hataMi = (i) => i.yanitlar.some((p) => p.flags === MessageFlags.Ephemeral 
     assert.equal(db.belge.liste(G, 'macGecmis').length, 1); assert.ok(i.yanitlar.length);
   });
 
+  console.log('Görseller');
+  const png = (ek) => { const b = ek.attachment; assert.ok(Buffer.isBuffer(b) && b.length > 5000 && b.subarray(1, 4).toString() === 'PNG', 'geçerli PNG değil'); };
+  await test('/profil ve /sıralama resim kartı + buton/menü üretir', async () => {
+    db.arttir(G, 'u1', 'xp', 5000);
+    const p = await kos('profil'); png(p.yanitlar[0].files[0]); assert.equal(p.yanitlar[0].components[0].components.length, 3);
+    const s = await kos('sıralama', { secenek: { tür: 'xp' } }); png(s.yanitlar[0].files[0]); assert.equal(s.yanitlar[0].components[0].components[0].options.length, 7);
+  });
+  await test('FACEIT maç verisi skor tablosuna dönüşür ve çizilir', () => {
+    const o = (id, ad, k, d) => ({ player_id: id, nickname: ad, player_stats: { Kills: String(k), Deaths: String(d), Assists: '4', 'K/D Ratio': (k / d).toFixed(2), ADR: '81.3', 'Headshots %': '44', MVPs: '2', 'Penta Kills': id === 'p1' ? '1' : '0' } });
+    const v = { rounds: [{ round_stats: { Map: 'de_mirage', Rounds: '24', Winner: 't1' }, teams: [
+      { team_id: 't1', team_stats: { Team: 'team_a', 'Final Score': '13', 'Team Win': '1' }, players: [o('p2', 'iki', 10, 15), o('p1', 'bir', 25, 12)] },
+      { team_id: 't2', team_stats: { Team: 'team_b', 'Final Score': '11', 'Team Win': '0' }, players: [o('p3', 'uc', 18, 17)] }] }] };
+    const m = require('../src/modules/faceit').skorModel(v, new Map([['p1', '@Kadir']]));
+    assert.equal(m.harita, 'Mirage'); assert.deepEqual([m.takimlar[0].skor, m.takimlar[1].skor], [13, 11]); assert.ok(m.takimlar[0].kazandi && !m.takimlar[1].kazandi);
+    assert.equal(m.takimlar[0].oyuncular[0].ad, 'bir', 'öldürmeye göre sıralı'); assert.ok(m.takimlar[0].oyuncular[0].vurgu); assert.equal(m.takimlar[0].oyuncular[0].etiket, '@Kadir'); assert.equal(m.takimlar[0].oyuncular[0].ace, 1);
+    png(require('../src/core/cizim').skorTablosu(m)); assert.equal(require('../src/modules/faceit').skorModel({}), null);
+  });
+  await test('kamp, müzik, karne ve afiş kartları çizilir (emoji/uzun ad dahil)', async () => {
+    const c = require('../src/core/cizim');
+    const uyeler = Array.from({ length: 15 }, (_, n) => ({ id: String(n), ad: n ? `Üye ${n}` : '🔥 Çok Uzun Bir Kullanıcı Adı Şğüöçİ 🔥', avatar: null, renk: null }));
+    png(await c.kampKart({ kanal: 'Ateş', sunucu: 'Test', uyeler, ates: { yakit: 80, seri: 3 }, muzik: 'Şarkı' }));
+    png(await c.kampKart({ kanal: 'Ateş', sunucu: 'Test', uyeler: [], ates: { yakit: 0, seri: 0 } }));
+    png(await c.muzikKart({ baslik: 'Bir şarkı', kanal: 'Sanatçı', sure: 200, isteyen: 'x', sira: 2 }));
+    png(await c.bannerKart({ ust: 'HOŞ GELDİN', baslik: '😀', alt: 'alt', ad: '😀' })); png(c.yardimKart(11, 61));
+  });
+  await test('müzik: ses kanalında değilken reddeder, radyo listesi menüye sığar', async () => {
+    assert.ok(hataMi(await kos('müzik', { alt: 'geç' })));
+    const { RADYOLAR, radyoMenu } = require('../src/modules/muzik');
+    assert.ok(Object.keys(RADYOLAR).length <= 13); assert.equal(radyoMenu(G).components[0].options.length, Object.keys(RADYOLAR).length);
+    for (const [, url] of Object.values(RADYOLAR)) assert.match(url, /^https:\/\//);
+  });
+
   console.log('Sunucu sorguları (yerel sahte sunucularla)');
   await test('Source A2S_INFO (challenge dahil)', async () => {
     const s = dgram.createSocket('udp4');
@@ -211,7 +243,8 @@ const hataMi = (i) => i.yanitlar.some((p) => p.flags === MessageFlags.Ephemeral 
     const { sunucuBaslat } = require('../src/web/server');
     const { WebSocket } = require('ws');
     const uye = (id) => ({ id, displayName: 'Uye' + id, displayHexColor: '#000000', displayAvatarURL: () => 'https://cdn.discordapp.com/embed/avatars/1.png', user: { bot: false }, voice: {} });
-    const kanal = { name: 'Ateş', isVoiceBased: () => true, members: new Map([['7', uye('7')], ['8', uye('8')]]) };
+    const botUye = { ...uye('99'), user: { bot: true } };
+    const kanal = { name: 'Ateş', isVoiceBased: () => true, members: new Collection([['7', uye('7')], ['8', uye('8')], ['99', botUye]]) };
     const guild = { id: G, name: 'Test', channels: { cache: new Map([['55', kanal]]) }, members: { fetch: async () => null } };
     const web = await sunucuBaslat({ port: 0, saglayici: { dogrula: kamp.dogrula, durum: kamp.durum, eylem: (g, c, u, m) => kamp.ifade(g, c, u, String(m.ad)) } });
     kamp._kur({ guilds: { cache: new Map([[G, guild]]) } }, web);
@@ -219,7 +252,7 @@ const hataMi = (i) => i.yanitlar.some((p) => p.flags === MessageFlags.Ephemeral 
     assert.equal(await ac('7', 'yanlis'), null);
     assert.equal(await ac('8', kamp.imza(G, '55', '7')), null, 'başkasının imzasıyla girilemez');
     const a = await ac('7', kamp.imza(G, '55', '7'));
-    assert.equal(a.gelen[0].t, 'durum'); assert.equal(a.gelen[0].uyeler.length, 2); assert.equal(a.gelen[0].ben, '7');
+    assert.equal(a.gelen[0].t, 'durum'); assert.equal(a.gelen[0].uyeler.length, 2, 'botlar ateş başına oturmaz'); assert.equal(a.gelen[0].ben, '7');
     const once = kamp.ates(G).yakit;
     a.ws.send(JSON.stringify({ t: 'ifade', ad: 'odun' })); await new Promise((r) => setTimeout(r, 150));
     assert.ok(a.gelen.some((m) => m.t === 'ifade' && m.ad === 'odun' && m.id === '7')); assert.ok(kamp.ates(G).yakit > once + 5);
@@ -229,6 +262,17 @@ const hataMi = (i) => i.yanitlar.some((p) => p.flags === MessageFlags.Ephemeral 
     assert.equal((await fetch(`http://127.0.0.1:${web.port}/static/..%2fserver.js`)).status, 403);
     assert.equal((await fetch(`http://127.0.0.1:${web.port}/avatar?u=http://169.254.169.254/x.png`)).status, 400);
     assert.equal((await fetch(`http://127.0.0.1:${web.port}/vendor/build/three.module.js`)).status, 200);
+    // Otomatik kart: kanala giriş olayı, kanalın sohbetine resimli kart + butonlar gönderir
+    const gonderilen = [];
+    kanal.send = async (p) => { gonderilen.push(p); return { id: 'kart1' }; }; kanal.messages = { edit: async (id, p) => { gonderilen.push({ duzenle: id, ...p }); }, delete: async () => {} };
+    const olay = y.olaylar.get('voiceStateUpdate').find((d) => d.modul === 'kamp').fn;
+    await olay({ channelId: null, guild }, { channelId: '55', id: '7', guild, member: uye('7'), channel: kanal });
+    await new Promise((r) => setTimeout(r, 2800));
+    assert.equal(gonderilen.length, 1); assert.match(gonderilen[0].content, /<@7> ateş başına oturdu/); png(gonderilen[0].files[0]);
+    assert.equal(gonderilen[0].components.length, 2); assert.equal(gonderilen[0].components[0].components[0].data.custom_id, 'kamp:link');
+    await olay({ channelId: '55', guild }, { channelId: '55', id: '8', guild, member: uye('8'), channel: kanal }); // susturma vb. durum değişimi: yeni mesaj atmaz, düzenler
+    await new Promise((r) => setTimeout(r, 2800));
+    assert.equal(gonderilen.length, 2); assert.equal(gonderilen[1].duzenle, 'kart1');
     await web.kapat();
   });
 

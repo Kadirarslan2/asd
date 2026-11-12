@@ -94,6 +94,15 @@ for (let i = 0; i < BOCEK; i++) bocekVeri.push({ a: rnd() * 6.28, r: 5 + rnd() *
 const bocekGeo = new THREE.BufferGeometry(); bocekGeo.setAttribute('position', new THREE.BufferAttribute(bocekPos, 3));
 scene.add(new THREE.Points(bocekGeo, new THREE.PointsMaterial({ map: isiltiDoku('rgba(220,255,150,1)', 'rgba(160,255,80,.5)'), size: 0.22, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })));
 
+// Radyo ve uçuşan notalar (sunucuda müzik çalarken görünür)
+const radyo = new THREE.Group(); radyo.position.set(1.35, 0, 0.75); radyo.rotation.y = -0.9; radyo.visible = false; scene.add(radyo);
+{ const g = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.3, 0.18), mat(0x8a3b2a)); g.position.y = 0.17; g.castShadow = true; radyo.add(g);
+  for (const sx of [-0.13, 0.13]) { const h = new THREE.Mesh(new THREE.CircleGeometry(0.085, 14), mat(0x1c1c22)); h.position.set(sx, 0.17, 0.092); radyo.add(h); }
+  const anten = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 4), mat(0xbbbbbb)); anten.position.set(0.2, 0.52, 0); anten.rotation.z = -0.35; radyo.add(anten); }
+function notaDoku(k) { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'); x.font = '52px serif'; x.fillStyle = '#ffd9a0'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(k, 32, 34); return new THREE.CanvasTexture(c); }
+const notalar = ['♪', '♫', '♩'].flatMap((k) => [0, 1]).map((_, i) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: notaDoku(['♪', '♫', '♩'][i % 3]), transparent: true, depthWrite: false, fog: false })); s.scale.setScalar(0.28); s.userData.f = i / 6; s.visible = false; scene.add(s); return s; });
+let muzikVar = false;
+
 // ---------- Avatarlar ----------
 const PALET = ['#e76f51', '#2a9d8f', '#e9c46a', '#8ab17d', '#577590', '#b5838d', '#f4a261', '#6d597a', '#43aa8b', '#f94144'];
 const TEN = [0xf1c9a5, 0xe0ac86, 0xc68863, 0x9c6b4a, 0xffdbb8];
@@ -189,6 +198,7 @@ function durumUygula(d) {
   $('#bos').style.display = d.uyeler.length ? 'none' : 'block';
   $('#alt').style.display = BEN && d.uyeler.some((u) => u.id === BEN) ? 'flex' : 'none';
   atesUygula(d.ates);
+  muzikVar = Boolean(d.muzik); radyo.visible = muzikVar; $('#muzik').style.display = muzikVar ? 'block' : 'none'; $('#muzik').textContent = muzikVar ? '🎵 ' + d.muzik : '';
   const n = d.uyeler.length; R = Math.max(2.7, n * 0.48);
   kontrol.minDistance = R + 1.5;
   const idler = new Set(d.uyeler.map((u) => u.id));
@@ -301,6 +311,7 @@ function kare() {
   scene.background.copy(GECE).lerp(KORKU, korku); scene.fog.color.copy(scene.background); scene.fog.density = 0.035 + korku * 0.03;
   ortam.intensity = 0.75 - korku * 0.5; ay.intensity = 0.55 - korku * 0.35;
 
+  for (const nota of notalar) { nota.visible = muzikVar; if (!muzikVar) continue; const f = (t * 0.22 + nota.userData.f) % 1; nota.position.set(1.35 + Math.sin(f * 9 + nota.userData.f * 20) * 0.35, 0.5 + f * 2.4, 0.75 + Math.cos(f * 7) * 0.25); nota.material.opacity = Math.sin(f * Math.PI); }
   // Avatarlar
   for (const [id, av] of avatarlar) {
     if (av.ayriliyor) { av.yaricap += dt * 5; av.olcek -= dt * 1.2; if (av.olcek <= 0.02) { scene.remove(av.g); avatarlar.delete(id); continue; } }
@@ -311,7 +322,7 @@ function kare() {
     // Boşta: nefes, hafif baş hareketi, ellerini ateşe tutma
     const f = t + av.faz;
     av.govde.position.y = 0; av.govde.rotation.set(Math.sin(f * 0.9) * 0.025 + 0.06, 0, Math.sin(f * 0.6) * 0.02);
-    av.kafa.rotation.set(Math.sin(f * 0.7) * 0.06 - korku * 0.15, Math.sin(f * 0.31) * 0.35, 0);
+    av.kafa.rotation.set(Math.sin(f * 0.7) * 0.06 - korku * 0.15 + (muzikVar ? Math.sin(t * 5.2) * 0.09 : 0), Math.sin(f * 0.31) * 0.35, 0); // müzikte kafa sallar
     av.kollar[0].rotation.set(-1.05 + Math.sin(f * 1.3) * 0.05, 0, 0.12); av.kollar[1].rotation.set(-1.05 + Math.cos(f * 1.3) * 0.05, 0, -0.12);
     av.cubuk.visible = false;
     if (av.ifade) {

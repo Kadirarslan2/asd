@@ -2,16 +2,17 @@
 const { SlashCommandBuilder, PermissionFlagsBits: P, ChannelType, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
 const db = require('../core/db');
 const { E, R, yanit, hata, tamam, zd, sayi, sureYaz, GIZLI } = require('../core/util');
+const cizim = require('../core/cizim');
 
 const KATEGORILER = {
   '🔥 Kamp Ateşi (3D)': ['kamp'],
   '🎯 Oyun': ['faceit', 'steam', 'oyun-sunucu'],
   '⚔️ Rekabet': ['maç', 'turnuva', 'takım-ara', 'tahmin'],
-  '📈 Seviye & Profil': ['seviye', 'profil', 'sıralama', 'görevler', 'başarımlar', 'rep', 'seviye-rol'],
+  '📈 Seviye & Profil': ['seviye', 'profil', 'sıralama', 'görevler', 'başarımlar', 'rep', 'seviye-rol', 'karne'],
   '🪙 Ekonomi': ['bakiye', 'günlük', 'çalış', 'gönder', 'market', 'kumar', 'ödül'],
   '🎲 Eğlence': ['düello', 'tkm', 'aim', 'trivia'],
   '👥 Topluluk': ['klan', 'çekiliş', 'anket', 'öneri', 'hatırlat', 'zaman-kapsülü', 'afk', 'doğumgünü', 'davetler'],
-  '🔊 Ses': ['oda'],
+  '🎵 Müzik & Ses': ['müzik', 'oda'],
   '🛡️ Moderasyon': ['ban', 'kick', 'sustur', 'susturma-kaldır', 'uyar', 'uyarılar', 'uyarı-sil', 'sil', 'jail', 'unjail', 'yavaşmod', 'kilit', 'otomod'],
   '⚙️ Yönetim': ['kurulum', 'ayar', 'ticket-panel', 'rol-panel', 'nabız'],
   'ℹ️ Bilgi': ['yardım', 'ping', 'avatar', 'sunucu', 'kullanıcı'],
@@ -71,8 +72,8 @@ async function kurulum(i) {
 
 function yardimEmbed(ctx, kategori) {
   if (!kategori) {
-    return E('🔥 KampAteş Bot — Yardım', 'Oyun toplulukları için her şey dahil bot. Aşağıdan bir kategori seç.\n\n' +
-      Object.entries(KATEGORILER).map(([k, v]) => `**${k}** — ${v.map((c) => `\`/${c}\``).join(' ')}`).join('\n'));
+    return E(null, 'Aşağıdaki menüden bir **kategori seç**; o kategorideki tüm komutlar açıklamalarıyla listelenir.\n\n' +
+      Object.entries(KATEGORILER).map(([k, v]) => `**${k}** · ${v.length} komut`).join('\n')).setImage('attachment://yardim.png');
   }
   const satirlar = [];
   for (const ad of KATEGORILER[kategori] || []) {
@@ -83,17 +84,17 @@ function yardimEmbed(ctx, kategori) {
     if (altlar.length) for (const a of altlar) satirlar.push(`\`/${ad} ${a.name}\` — ${a.description}`);
     else satirlar.push(`\`/${ad}\` — ${j.description}`);
   }
-  return E(kategori, satirlar.join('\n') || 'Komut yok.');
+  return E(kategori, satirlar.join('\n') || 'Komut yok.').setImage('attachment://yardim.png');
 }
 const yardimMenu = () => new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId('yardim').setPlaceholder('Kategori seç…')
-  .addOptions(Object.keys(KATEGORILER).map((k) => ({ label: k.replace(/^\S+\s/, ''), value: k, emoji: k.split(' ')[0] }))));
+  .addOptions(Object.entries(KATEGORILER).map(([k, v]) => ({ label: k.replace(/^\S+\s/, ''), value: k, emoji: k.split(' ')[0], description: v.map((c) => `/${c}`).join(' ').slice(0, 100) }))));
 
 module.exports = {
   ad: 'genel',
   KATEGORILER,
   komutlar: [
     { data: new SlashCommandBuilder().setName('yardım').setDescription('Tüm komutları kategorilere göre gösterir'),
-      calistir: (i, ctx) => i.reply({ embeds: [yardimEmbed(ctx)], components: [yardimMenu()] }) },
+      calistir: (i, ctx) => i.reply({ embeds: [yardimEmbed(ctx)], components: [yardimMenu()], files: [cizim.yardimKart(Object.keys(KATEGORILER).length, ctx.komutlar.size)] }) },
     { data: new SlashCommandBuilder().setName('ping').setDescription('Botun gecikmesini gösterir'),
       calistir: (i) => yanit(i, E(null, `🏓 Gecikme: **${Math.max(0, Math.round(i.client.ws.ping))}ms** • Çalışma süresi: **${sureYaz(i.client.uptime)}**`, R.bilgi)) },
     { data: new SlashCommandBuilder().setName('avatar').setDescription('Bir üyenin avatarını gösterir').addUserOption((o) => o.setName('üye').setDescription('Üye')),

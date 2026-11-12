@@ -2,7 +2,9 @@
 // Ateş sunucunun ortak ateşidir: seste zaman geçtikçe ve odun atıldıkça büyür, kimse yokken söner.
 // Her gün seste biri oldukça "ateş serisi" uzar.
 const crypto = require('node:crypto');
-const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits: P } = require('discord.js');
+const cizim = require('../core/cizim');
+const muzik = require('./muzik');
 const db = require('../core/db');
 const config = require('../core/config');
 const oyuncu = require('../core/oyuncu');
@@ -48,7 +50,7 @@ function durum(g, c) {
   const guild = client.guilds.cache.get(g), kanal = guild?.channels.cache.get(c);
   if (!kanal?.isVoiceBased()) return null;
   const anahtar = `${g}:${c}`;
-  const mevcut = [...kanal.members.keys()];
+  const mevcut = [...kanal.members.filter((m) => !m.user.bot).keys()]; // botlar ateş başına oturmaz
   const duzen = (sira.get(anahtar) || []).filter((id) => mevcut.includes(id));
   for (const id of mevcut) if (!duzen.includes(id)) duzen.push(id);
   sira.set(anahtar, duzen);
@@ -59,8 +61,42 @@ function durum(g, c) {
       sessiz: Boolean(v.selfMute || v.serverMute), sagir: Boolean(v.selfDeaf || v.serverDeaf), yayin: Boolean(v.streaming), kamera: Boolean(v.selfVideo), bot: m.user.bot,
       seviye: u?.seviye ?? 0, faceit: u?.faceit_lvl || 0, klan: klan?.etiket || null };
   });
-  return { kanal: kanal.name, sunucu: guild.name, uyeler, ates: atesOzet(ates(g)) };
+  return { kanal: kanal.name, sunucu: guild.name, uyeler, ates: atesOzet(ates(g)), muzik: muzik.simdiCalan(g, c) };
 }
+// ---- Otomatik kamp kartı: biri ses kanalına girince kanalın sohbetine resimli kart düşer, komut yazmaya gerek kalmaz ----
+const kartlar = new Map(); // kanal id -> { mesaj, z, katilan }
+const kartButonlari = (g) => [new ActionRowBuilder().addComponents(
+  new ButtonBuilder().setCustomId('kamp:link').setLabel('3D ateş başına otur').setEmoji('🔥').setStyle(ButtonStyle.Primary),
+  new ButtonBuilder().setCustomId('kamp:odun').setLabel('Odun at').setEmoji('🪵').setStyle(ButtonStyle.Secondary),
+  new ButtonBuilder().setCustomId('kamp:foto').setLabel('Hatıra fotoğrafı').setEmoji('📸').setStyle(ButtonStyle.Secondary)), muzik.radyoMenu(g)];
+function kartPlanla(guild, c, katilan = null) {
+  if (!db.ayar(guild.id, 'kamp.oto', true)) return;
+  const k = kartlar.get(c) || {};
+  if (katilan) k.katilan = katilan;
+  clearTimeout(k.z);
+  k.z = setTimeout(() => kartCiz(guild, c).catch(() => {}), 2500); // art arda giriş çıkışları tek güncellemede topla
+  kartlar.set(c, k);
+}
+async function kartCiz(guild, c) {
+  const g = guild.id, k = kartlar.get(c) || {}, kanal = guild.channels.cache.get(c);
+  const eski = k.mesaj || db.ayar(g, `kamp.kart.${c}`);
+  const d = kanal && durum(g, c);
+  if (!d || !d.uyeler.length) {
+    if (eski) kanal?.messages.delete(eski).catch(() => {});
+    db.ayarYaz(g, `kamp.kart.${c}`, null); kartlar.delete(c);
+    return;
+  }
+  const yuk = { files: [await cizim.kampKart(d)], components: kartButonlari(g) };
+  if (eski && !k.katilan) {
+    const oldu = await kanal.messages.edit(eski, { ...yuk, attachments: [] }).then(() => true, () => false);
+    if (oldu) return;
+  }
+  if (eski) kanal.messages.delete(eski).catch(() => {});
+  const m = await kanal.send({ content: k.katilan ? `🔥 <@${k.katilan}> ateş başına oturdu` : undefined, allowedMentions: { users: [] }, ...yuk }).catch(() => null);
+  k.katilan = null; k.mesaj = m?.id || null; kartlar.set(c, k);
+  db.ayarYaz(g, `kamp.kart.${c}`, k.mesaj);
+}
+
 const guncelle = (g, c) => { if (web?.izlenen(g, c)) { const d = durum(g, c); if (d) web.yayin(g, c, { t: 'durum', ...d }); } };
 
 // Web'den ya da /kamp odun komutundan gelen ifade
@@ -95,10 +131,16 @@ module.exports = {
     { data: new SlashCommandBuilder().setName('kamp').setDescription('3D kamp ateşi: ses kanalındakiler ateşin başında oturur')
         .addSubcommand((s) => s.setName('aç').setDescription('Bulunduğun ses kanalının 3D kamp ateşi bağlantısını verir'))
         .addSubcommand((s) => s.setName('durum').setDescription('Sunucu ateşinin durumunu ve ateş serisini gösterir'))
-        .addSubcommand((s) => s.setName('odun').setDescription('Ateşe odun atar (seste olmalısın)')),
+        .addSubcommand((s) => s.setName('odun').setDescription('Ateşe odun atar (seste olmalısın)'))
+        .addSubcommand((s) => s.setName('otomatik').setDescription('[Yönetici] Ses kanalına girince otomatik kamp kartını açar/kapatır').addBooleanOption((o) => o.setName('açık').setDescription('Açık mı?').setRequired(true))),
       calistir: async (i) => {
         const alt = i.options.getSubcommand(), g = i.guild.id;
         if (alt === 'durum') return yanit(i, E('🔥 Sunucu Ateşi', `${atesYaz(ates(g))}\n\n*Seste zaman geçirdikçe ve odun attıkça ateş büyür; kimse yokken yavaşça söner. Her gün seste biri olursa seri uzar.*`));
+        if (alt === 'otomatik') {
+          if (!i.memberPermissions.has(P.ManageGuild)) return hata(i, 'Bunun için **Sunucuyu Yönet** yetkisi gerekir.');
+          db.ayarYaz(g, 'kamp.oto', i.options.getBoolean('açık'));
+          return yanit(i, E(null, `✅ Otomatik kamp kartı ${i.options.getBoolean('açık') ? 'açık: ses kanalına giren herkes için kart kendiliğinden gelir' : 'kapalı'}.`, R.ok), true);
+        }
         const kanal = i.member.voice.channel;
         if (!kanal) return hata(i, 'Önce bir ses kanalına gir.');
         if (alt === 'odun') {
@@ -110,14 +152,26 @@ module.exports = {
       } },
   ],
   bilesenler: {
-    kamp: (i) => {
+    kamp: async (i, [islem]) => {
       const kanal = i.member.voice.channel;
       if (!kanal) return hata(i, 'Önce ses kanalına gir.');
-      return yanit(i, { content: 'Sana özel bağlantın hazır:', components: [linkButonu(i.guild.id, kanal.id, i.user.id)] }, true);
+      if (islem === 'odun') {
+        const h = await ifade(i.guild.id, kanal.id, i.user.id, 'odun');
+        if (h) return hata(i, h.mesaj);
+        kartPlanla(i.guild, kanal.id);
+        return yanit(i, E(null, `🪵 ${i.user} ateşe odun attı!`), false);
+      }
+      if (islem === 'foto') {
+        await i.deferReply();
+        const d = durum(i.guild.id, kanal.id);
+        return i.editReply({ content: `📸 **${kanal.name}** hatırası — ${new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}`, files: [await cizim.kampKart(d)] });
+      }
+      return yanit(i, { embeds: [E(null, 'Sana özel 3D sahne bağlantın hazır. Aç, ateşin başındaki yerini al 🔥\n*Bağlantı kişiye özeldir; paylaşma.*')], components: [linkButonu(i.guild.id, kanal.id, i.user.id)] }, true);
     },
   },
   hazir: async (ctx) => {
     client = ctx.client;
+    muzik.degisince((g) => { const guild = client.guilds.cache.get(g); if (!guild) return; for (const c of kartlar.keys()) if (guild.channels.cache.has(c)) { kartPlanla(guild, c); guncelle(g, c); } });
     try {
       web = await sunucuBaslat({ port: config.port, saglayici: { dogrula, durum, eylem: (g, c, u, m) => (m.t === 'ifade' ? ifade(g, c, u, String(m.ad)) : null) } });
       console.log(`🔥 Kamp ateşi web sunucusu: ${config.publicUrl} (port ${web.port})`);
@@ -129,12 +183,10 @@ module.exports = {
       if (eski.channelId) guncelle(g, eski.channelId);
       if (yeni.channelId && yeni.channelId !== eski.channelId) guncelle(g, yeni.channelId);
       else if (yeni.channelId) guncelle(g, yeni.channelId);
-      // Kamp ateşi kanalına ilk giren için davet mesajı
-      if (yeni.channelId && yeni.channelId !== eski.channelId && yeni.channelId === db.ayar(g, 'ses.kamp') && !yeni.member?.user.bot && yeni.channel.members.filter((m) => !m.user.bot).size === 1) {
-        if (Date.now() - (bekleme.get(`davet:${yeni.channelId}`) || 0) < 30 * 6e4) return;
-        bekleme.set(`davet:${yeni.channelId}`, Date.now());
-        await yeni.channel.send({ embeds: [E(null, `🔥 ${yeni.member} ateşi yaktı! Herkes ateş başına…`)], components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('kamp:link').setLabel('3D ateş başını aç').setEmoji('🔥').setStyle(ButtonStyle.Primary))] }).catch(() => {});
-      }
+      // Otomatik kart: giren/çıkan oldukça kanalın sohbetindeki kamp kartı güncellenir
+      const guild = yeni.guild, atla = [db.ayar(g, 'ses.olustur'), guild.afkChannelId];
+      if (eski.channelId && eski.channelId !== yeni.channelId && !atla.includes(eski.channelId)) kartPlanla(guild, eski.channelId);
+      if (yeni.channelId && !atla.includes(yeni.channelId)) kartPlanla(guild, yeni.channelId, yeni.channelId !== eski.channelId && !yeni.member?.user.bot ? yeni.id : null);
     },
     // Ses kanalının sohbetine yazılanlar sahnede konuşma balonu olur
     messageCreate: (m) => {

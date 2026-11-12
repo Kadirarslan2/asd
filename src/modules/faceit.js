@@ -1,6 +1,7 @@
 // FACEIT entegrasyonu: profil, son maçlar, karşılaştırma, hesap bağlama, sunucu ELO sıralaması,
 // otomatik seviye rolleri ve maç takibi (yeni maç bitince kanala düşer; tilt/seri alarmı verir)
-const { SlashCommandBuilder, PermissionFlagsBits: P } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits: P, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
+const cizim = require('../core/cizim');
 const db = require('../core/db');
 const config = require('../core/config');
 const oyuncu = require('../core/oyuncu');
@@ -43,21 +44,67 @@ function sonrakiSeviye(elo, lvl) {
   return `\`${cubuk((elo - alt) / (ust - alt), 10)}\` Seviye ${lvl + 1}'e **${ust - elo}** ELO`;
 }
 
-async function profilEmbed(p) {
+const haritaAd = (m) => { const a = String(m || '?').replace(/^de_/, ''); return a.charAt(0).toUpperCase() + a.slice(1); };
+const satir = (...b) => new ActionRowBuilder().addComponents(...b);
+
+// Profil kartı + butonlar
+async function profilMesaj(p) {
   const o = p.games?.[OYUN];
-  if (!o) return E(p.nickname, 'Bu oyuncunun CS2 kaydı yok.', R.gri).setURL(profilUrl(p));
+  if (!o) return { embeds: [E(p.nickname, 'Bu oyuncunun CS2 kaydı yok.', R.gri).setURL(profilUrl(p))] };
   const st = await api(`/players/${p.player_id}/stats/${OYUN}`);
-  const l = st?.lifetime || {};
-  const haritalar = (st?.segments || []).filter((s) => s.type === 'Map' && s.mode === '5v5').sort((a, b) => Number(b.stats.Matches) - Number(a.stats.Matches)).slice(0, 3);
-  const e = E(`${p.nickname} ${p.country ? `:flag_${p.country.toLowerCase()}:` : ''}`, null, 0xff5500).setURL(profilUrl(p)).setThumbnail(p.avatar || null)
-    .addFields(
-      { name: 'ELO', value: `**${sayi(o.faceit_elo)}**`, inline: true }, { name: 'Seviye', value: lvlYaz(o.skill_level), inline: true }, { name: 'Bölge', value: o.region || '—', inline: true },
-      { name: 'İlerleme', value: sonrakiSeviye(o.faceit_elo, o.skill_level) },
-      { name: 'Maç', value: String(l.Matches ?? '—'), inline: true }, { name: 'Kazanma', value: `%${l['Win Rate %'] ?? '—'}`, inline: true }, { name: 'K/D', value: String(l['Average K/D Ratio'] ?? '—'), inline: true },
-      { name: 'HS', value: `%${l['Average Headshots %'] ?? '—'}`, inline: true }, { name: 'ADR', value: String(l.ADR ?? '—'), inline: true }, { name: 'En uzun seri', value: String(l['Longest Win Streak'] ?? '—'), inline: true },
-      { name: 'Son 5 maç', value: sonuclar(l['Recent Results']) || '—' });
-  if (haritalar.length) e.addFields({ name: 'En çok oynanan haritalar', value: haritalar.map((h) => `**${h.label}** — ${h.stats.Matches} maç • %${h.stats['Win Rate %']} • ${h.stats['Average K/D Ratio']} K/D`).join('\n') });
-  return e;
+  const l = st?.lifetime || {}, lvl = o.skill_level, elo = o.faceit_elo;
+  const haritalar = (st?.segments || []).filter((s) => s.type === 'Map' && s.mode === '5v5').sort((a, b) => Number(b.stats.Matches) - Number(a.stats.Matches)).slice(0, 3)
+    .map((h) => ({ ad: haritaAd(h.label), mac: h.stats.Matches, kazanma: h.stats['Win Rate %'], kd: h.stats['Average K/D Ratio'] }));
+  const kd = Number(l['Average K/D Ratio']), wr = Number(l['Win Rate %']);
+  const kart = await cizim.faceitKart({ nick: p.nickname, avatar: p.avatar || null, ulke: (p.country || '').toUpperCase(), bolge: o.region, lvl, elo,
+    oran: lvl >= 10 ? 1 : (elo - ESIK[lvl]) / (ESIK[lvl + 1] - ESIK[lvl]), ilerleme: lvl >= 10 ? 'En yüksek seviye' : `Seviye ${lvl + 1}'e ${ESIK[lvl + 1] - elo} ELO`,
+    kutular: [['MAÇ', sayi(l.Matches)], ['KAZANMA', `%${l['Win Rate %'] ?? '-'}`, wr >= 50 ? cizim.RENK.yesil : cizim.RENK.kirmizi], ['K/D', String(l['Average K/D Ratio'] ?? '-'), kd >= 1 ? cizim.RENK.yesil : cizim.RENK.kirmizi],
+      ['HS', `%${l['Average Headshots %'] ?? '-'}`], ['ADR', String(l.ADR ?? '-')], ['EN UZUN SERİ', String(l['Longest Win Streak'] ?? '-'), cizim.RENK.altin]],
+    son: (l['Recent Results'] || []).map((x) => String(x) === '1'), haritalar });
+  const b = (id, ad, emoji, stil = ButtonStyle.Secondary) => new ButtonBuilder().setCustomId(`faceit:${id}:${p.player_id}`).setLabel(ad).setEmoji(emoji).setStyle(stil);
+  return { files: [kart], attachments: [], components: [satir(b('sonmac', 'Son maçın skor tablosu', '📋', ButtonStyle.Primary), b('maclar', 'Son 10 maç', '🕹️'), b('yenile', 'Yenile', '🔄'), new ButtonBuilder().setLabel('FACEIT').setStyle(ButtonStyle.Link).setURL(profilUrl(p)))] };
+}
+
+// Son maçlar: özet + açılır menüden maç seçince tüm oyuncuların skor tablosu
+async function maclarMesaj(p) {
+  const v = await api(`/players/${p.player_id}/games/${OYUN}/stats?offset=0&limit=10`);
+  const m = (v?.items || []).map((x) => x.stats).filter((x) => x['Match Id']);
+  if (!m.length) return null;
+  const ort = (alan) => (m.reduce((a, x) => a + Number(x[alan] || 0), 0) / m.length).toFixed(2);
+  const g = m.filter((s) => s.Result === '1').length;
+  const e = E(`${p.nickname} — son ${m.length} maç`, m.map((s) => `${s.Result === '1' ? '🟩' : '🟥'} **${haritaAd(s.Map)}** \`${String(s.Score || '').replace(/\s/g, '')}\` — **${s.Kills}/${s.Deaths}/${s.Assists}** • K/D ${s['K/D Ratio']} • HS %${s['Headshots %']}`).join('\n'), 0xff5500)
+    .setURL(profilUrl(p)).setThumbnail(p.avatar || null)
+    .addFields({ name: 'Form', value: `**${g}G / ${m.length - g}M**`, inline: true }, { name: 'Ort. K/D', value: ort('K/D Ratio'), inline: true }, { name: 'Ort. öldürme', value: ort('Kills'), inline: true })
+    .setFooter({ text: 'Bir maçı seç: iki takımın tüm oyuncularıyla skor tablosu gelir' });
+  const menu = new StringSelectMenuBuilder().setCustomId('faceit:mac').setPlaceholder('📋 Skor tablosunu görmek için maç seç')
+    .addOptions(m.map((s, k) => ({ label: `${haritaAd(s.Map)} ${String(s.Score || '').replace(/\s/g, '')}`.slice(0, 100), description: `${s.Kills}/${s.Deaths}/${s.Assists} • K/D ${s['K/D Ratio']}`.slice(0, 100), value: s['Match Id'], emoji: s.Result === '1' ? '🟩' : '🟥' })).filter((o, k, d) => d.findIndex((x) => x.value === o.value) === k));
+  return { embeds: [e], components: [satir(menu)] };
+}
+
+// FACEIT maç istatistiğini skor tablosu modeline çevirir; sunucuya bağlı oyuncular vurgulanır
+function skorModel(v, bagli = new Map()) {
+  const tur = v?.rounds?.[0];
+  if (!tur) return null;
+  const n = (x) => Number(x) || 0;
+  const takimlar = tur.teams.map((t) => ({
+    ad: t.team_stats?.Team || 'Takım', skor: n(t.team_stats?.['Final Score']), kazandi: t.team_stats?.['Team Win'] === '1' || tur.round_stats?.Winner === t.team_id,
+    oyuncular: t.players.map((o) => { const s = o.player_stats || {}, k = n(s.Kills), d = n(s.Deaths); return { ad: o.nickname, k, d, a: n(s.Assists), kd: n(s['K/D Ratio']) || k / Math.max(1, d), adr: n(s.ADR), hs: n(s['Headshots %']), mvp: n(s.MVPs), ace: n(s['Penta Kills']), vurgu: bagli.has(o.player_id), etiket: bagli.get(o.player_id) || null }; }).sort((a, b) => b.k - a.k),
+  }));
+  return { harita: haritaAd(tur.round_stats?.Map), alt: `FACEIT 5v5  •  ${tur.round_stats?.Rounds || takimlar[0].skor + takimlar[1].skor} tur`, takimlar, dipnot: bagli.size ? 'Turuncu satırlar bu sunucunun üyeleri' : '' };
+}
+async function skorMesaj(guild, macId) {
+  const v = await api(`/matches/${macId}/stats`, 10 * 6e4);
+  const bagli = new Map(db.faceitBagli(guild.id).map((u) => [u.faceit_id, `@${guild.members.cache.get(u.user)?.displayName || u.faceit_nick}`]));
+  const model = skorModel(v, bagli);
+  if (!model) return null;
+  return { files: [cizim.skorTablosu(model)], components: [satir(new ButtonBuilder().setLabel('Maç odası').setStyle(ButtonStyle.Link).setURL(`https://www.faceit.com/tr/cs2/room/${macId}`))] };
+}
+// Profil kartındaki FACEIT butonu için: üyenin bağlı hesabını gönderir
+async function profilGonder(i, userId) {
+  const u = db.uye(i.guild.id, userId);
+  if (!u.faceit_id) return hata(i, 'Bağlı FACEIT hesabı yok.');
+  await i.deferReply();
+  try { const p = await api(`/players/${u.faceit_id}`); return i.editReply(p ? await profilMesaj(p) : { content: 'Oyuncu bulunamadı.' }); } catch (e) { return hataYaz(i, e); }
 }
 
 function hataYaz(i, e) {
@@ -89,7 +136,25 @@ async function rolGuncelle(guild, userId, lvl) {
 let tur = 0;
 module.exports = {
   ad: 'faceit',
-  api, sonrakiSeviye, ESIK,
+  api, sonrakiSeviye, ESIK, skorModel, profilGonder,
+  bilesenler: {
+    faceit: async (i, [islem, id]) => {
+      try {
+        if (islem === 'mac' || islem === 'sonmac') {
+          await i.deferReply();
+          let macId = islem === 'mac' ? i.values[0] : null;
+          if (!macId) macId = (await api(`/players/${id}/games/${OYUN}/stats?offset=0&limit=1`))?.items?.[0]?.stats?.['Match Id'];
+          const mesaj = macId && await skorMesaj(i.guild, macId);
+          return i.editReply(mesaj || { content: 'Bu maçın istatistikleri bulunamadı.' });
+        }
+        const p = await api(`/players/${id}`, islem === 'yenile' ? 0 : 60_000);
+        if (!p) return hata(i, 'Oyuncu bulunamadı.');
+        if (islem === 'maclar') { await i.deferReply(); return i.editReply((await maclarMesaj(p)) || { content: 'Kayıtlı CS2 maçı yok.' }); }
+        await i.deferUpdate();
+        return i.editReply(await profilMesaj(p));
+      } catch (e) { return hataYaz(i, e); }
+    },
+  },
   komutlar: [
     { data: new SlashCommandBuilder().setName('faceit').setDescription('FACEIT CS2 istatistikleri')
         .addSubcommand((s) => s.setName('profil').setDescription('Oyuncu profili: ELO, seviye, K/D, kazanma oranı')
@@ -141,19 +206,15 @@ module.exports = {
             const p = await hedefCoz(i);
             if (p === undefined) return;
             if (!p) return hata(i, 'Oyuncu bulunamadı.');
-            return i.editReply({ embeds: [await profilEmbed(p)] });
+            return i.editReply(await profilMesaj(p));
           }
           if (alt === 'maçlar') {
             const p = await hedefCoz(i);
             if (p === undefined) return;
             if (!p) return hata(i, 'Oyuncu bulunamadı.');
-            const v = await api(`/players/${p.player_id}/games/${OYUN}/stats?offset=0&limit=10`);
-            const m = (v?.items || []).map((x) => x.stats);
-            if (!m.length) return hata(i, 'Bu oyuncunun kayıtlı CS2 maçı yok.');
-            const ort = (alan) => (m.reduce((a, x) => a + Number(x[alan] || 0), 0) / m.length).toFixed(2);
-            const satirlar = m.map((s) => `${s.Result === '1' ? '🟩' : '🟥'} \`${(s.Map || '?').replace('de_', '').padEnd(8)}\` \`${String(s.Score || '').replace(/\s/g, '').padEnd(5)}\` **${s.Kills}/${s.Deaths}/${s.Assists}** • K/D ${s['K/D Ratio']} • HS %${s['Headshots %']}${s.ADR ? ` • ADR ${Math.round(s.ADR)}` : ''}`);
-            return i.editReply({ embeds: [E(`${p.nickname} — son ${m.length} maç`, satirlar.join('\n'), 0xff5500).setURL(profilUrl(p))
-              .addFields({ name: 'Ortalama', value: `**${m.filter((s) => s.Result === '1').length}G / ${m.filter((s) => s.Result !== '1').length}M** • K/D ${ort('K/D Ratio')} • ${ort('Kills')} öldürme • HS %${ort('Headshots %')}` })] });
+            const mesaj = await maclarMesaj(p);
+            if (!mesaj) return hata(i, 'Bu oyuncunun kayıtlı CS2 maçı yok.');
+            return i.editReply(mesaj);
           }
           // karşılaştır
           const p1 = await oyuncuBul(i.options.getString('nick1').trim());
@@ -209,9 +270,16 @@ module.exports = {
         if (o.skill_level < u.faceit_lvl) ek += `\n📉 Seviye düştü → ${lvlYaz(o.skill_level)}`;
         if (seri <= -3) ek += `\n🧊 **Tilt alarmı:** üst üste ${-seri} mağlubiyet. Bir su iç, mola ver, ateşin başına gel 🔥`;
         if (seri >= 3) ek += `\n🔥 **Seride:** üst üste ${seri} galibiyet!`;
-        await kanal.send({ embeds: [E(`${kazandi ? '🟩 Galibiyet' : '🟥 Mağlubiyet'} — ${p.nickname}`,
+        // Aynı maçta birden çok üye varsa skor tablosu bir kez gönderilir
+        const gonderilen = db.ayar(u.guild, 'faceit.sonMaclar', []);
+        let ekMesaj = null;
+        if (!gonderilen.includes(s['Match Id'])) {
+          db.ayarYaz(u.guild, 'faceit.sonMaclar', [...gonderilen, s['Match Id']].slice(-40));
+          ekMesaj = await skorMesaj(guild, s['Match Id']).catch(() => null);
+        }
+        await kanal.send({ files: ekMesaj?.files || [], components: ekMesaj?.components || [], embeds: [E(`${kazandi ? '🟩 Galibiyet' : '🟥 Mağlubiyet'} — ${p.nickname}`,
           `<@${u.user}> • **${(s.Map || '?').replace('de_', '')}** • ${String(s.Score || '').replace(/\s/g, '')}\n**${s.Kills}/${s.Deaths}/${s.Assists}** • K/D ${s['K/D Ratio']} • HS %${s['Headshots %']}${s.ADR ? ` • ADR ${Math.round(s.ADR)}` : ''}\nELO: **${sayi(o.faceit_elo)}** (${fark >= 0 ? '+' : ''}${fark})${ek}`, kazandi ? R.ok : R.hata)
-          .setURL(`https://www.faceit.com/tr/cs2/room/${s['Match Id']}`).setThumbnail(p.avatar || null)] }).catch(() => {});
+          .setURL(`https://www.faceit.com/tr/cs2/room/${s['Match Id']}`).setThumbnail(p.avatar || null).setImage(ekMesaj ? 'attachment://skor.png' : null)] }).catch(() => {});
       } catch (e) { if (e.kod === 429) return; }
     }
   },

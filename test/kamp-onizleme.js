@@ -8,7 +8,7 @@ const ates = { yakit: 70, seri: 12, toplam: 348 };
   let web;
   web = await sunucuBaslat({ port: Number(process.env.WEB_PORT || 3000), saglayici: {
     dogrula: () => true,
-    durum: () => ({ kanal: 'Kamp Ateşi', sunucu: 'Önizleme Sunucusu', uyeler, ates }),
+    durum: () => ({ kanal: 'Kamp Ateşi', sunucu: 'Önizleme Sunucusu', uyeler, ates, muzik: 'Kamp ateşi (akustik/folk)' }),
     eylem: (g, c, u, m) => { web.yayin(g, c, { t: 'ifade', id: u, ad: m.ad }); if (m.ad === 'odun') { ates.yakit = Math.min(100, ates.yakit + 6); ates.toplam++; web.yayin(g, c, { t: 'ates', ates }); } return null; },
   } });
   console.log(`Önizleme: http://localhost:${web.port}/kamp/1/2?u=1000&k=x`);

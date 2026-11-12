@@ -1,6 +1,7 @@
 // Oyuncu servisi: XP, para, günlük görevler ve başarımlar — tüm modüller buradan geçer
 const db = require('./db');
-const { E, R, gun, para } = require('./util');
+const { E, R, gun, para, sayi } = require('./util');
+const cizim = require('./cizim');
 
 const seviyeXp = (l) => 5 * l * l + 50 * l + 100; // l -> l+1 için gereken XP
 function seviyeHesapla(xp) {
@@ -58,11 +59,11 @@ function gununGorevleri(userId, tarih = gun()) {
   return secilen;
 }
 
-async function duyur(guild, kanal, embed, icerik) {
+async function duyur(guild, kanal, embed, icerik, dosyalar) {
   try {
     const id = db.ayar(guild.id, 'kanal.seviye');
     const hedef = (id && guild.channels.cache.get(id)) || kanal;
-    if (hedef?.isTextBased?.()) await hedef.send({ content: icerik, embeds: [embed], allowedMentions: { users: [] } });
+    if (hedef?.isTextBased?.()) await hedef.send({ content: icerik, embeds: embed ? [embed] : [], files: dosyalar || [], allowedMentions: { users: [] } });
   } catch { /* kanal silinmiş ya da yetki yok: sessizce geç */ }
 }
 
@@ -92,7 +93,10 @@ const oyuncu = {
         await member.roles.add(rolId).then(() => verilen.push(`<@&${rolId}>`)).catch(() => {});
       }
     }
-    await duyur(guild, kanal, E(null, `🎉 <@${userId}> **${seviye}. seviyeye** ulaştı! Ödül: ${para(odul)}${verilen.length ? `\nYeni rol: ${verilen.join(', ')}` : ''}`, R.altin), `<@${userId}>`);
+    if (member) {
+      const kart = await cizim.bannerKart({ ust: 'SEVİYE ATLADI', baslik: `Seviye ${seviye}`, alt: `${member.displayName}  •  Ödül: ${sayi(odul)} coin`, avatarUrl: member.displayAvatarURL({ extension: 'png', size: 256 }), ad: member.displayName, vurgu: cizim.RENK.altin, dosya: 'seviye' });
+      await duyur(guild, kanal, null, `🎉 <@${userId}> **${seviye}. seviyeye** ulaştı!${verilen.length ? ` Yeni rol: ${verilen.join(', ')}` : ''}`, [kart]);
+    } else await duyur(guild, kanal, E(null, `🎉 <@${userId}> **${seviye}. seviyeye** ulaştı! Ödül: ${para(odul)}`, R.altin));
     if (seviye >= 5) await oyuncu.basarimVer(guild, userId, 'seviye5', kanal);
     if (seviye >= 10) await oyuncu.basarimVer(guild, userId, 'seviye10', kanal);
     if (seviye >= 25) await oyuncu.basarimVer(guild, userId, 'seviye25', kanal);
