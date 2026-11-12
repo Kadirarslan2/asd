@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Kamp Ateşi</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #070b18; color: #f4ead8; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  canvas#sahne { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  .kutu { position: fixed; background: rgba(10, 13, 26, .62); backdrop-filter: blur(8px); border: 1px solid rgba(255, 190, 120, .16); border-radius: 14px; }
+  #ust { top: 14px; left: 14px; padding: 12px 16px; min-width: 210px; max-width: calc(100vw - 28px); }
+  #ust h1 { margin: 0; font-size: 17px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #ust .alt { font-size: 12px; opacity: .7; margin-top: 2px; }
+  #yakit { height: 7px; border-radius: 4px; background: rgba(255,255,255,.12); margin: 10px 0 6px; overflow: hidden; }
+  #yakit i { display: block; height: 100%; width: 0; border-radius: 4px; background: linear-gradient(90deg, #c2410c, #fb923c, #fde68a); transition: width 1s; }
+  #seri { font-size: 12.5px; }
+  #alt { bottom: 16px; left: 50%; transform: translateX(-50%); padding: 8px; display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; max-width: calc(100vw - 20px); }
+  button { font: inherit; font-size: 14px; color: inherit; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.1); border-radius: 10px; padding: 9px 13px; cursor: pointer; white-space: nowrap; transition: background .15s, transform .1s; }
+  button:hover { background: rgba(255, 170, 90, .25); }
+  button:active { transform: scale(.95); }
+  button:disabled { opacity: .35; cursor: default; }
+  #ses { top: 14px; right: 14px; padding: 0; }
+  #ses button { border: 0; background: none; padding: 10px 13px; }
+  #bildirim { top: 76px; right: 14px; padding: 9px 14px; font-size: 13px; opacity: 0; transition: opacity .3s; pointer-events: none; max-width: 260px; }
+  #bos { top: 50%; left: 50%; transform: translate(-50%, 120px); padding: 12px 18px; font-size: 14px; text-align: center; display: none; }
+  #ipucu { position: fixed; bottom: 4px; right: 10px; font-size: 11px; opacity: .35; }
+</style>
+<script type="importmap">{ "imports": { "three": "/vendor/build/three.module.js", "three/addons/": "/vendor/examples/jsm/" } }</script>
+</head>
+<body>
+<canvas id="sahne"></canvas>
+<div id="ust" class="kutu">
+  <h1 id="kanal">Bağlanıyor…</h1>
+  <div class="alt" id="bilgi"></div>
+  <div id="yakit"><i></i></div>
+  <div id="seri"></div>
+</div>
+<div id="ses" class="kutu"><button id="sesBtn" title="Ateş sesi">🔇</button></div>
+<div id="bildirim" class="kutu"></div>
+<div id="bos" class="kutu">Ateşin başında kimse yok…<br><small>Discord'da ses kanalına girince burada belirirsin.</small></div>
+<div id="alt" class="kutu" style="display:none">
+  <button data-ifade="selam">👋 Selam</button>
+  <button data-ifade="odun">🪵 Odun at</button>
+  <button data-ifade="marshmallow">🍡 Marshmallow</button>
+  <button data-ifade="alkis">👏 Alkış</button>
+  <button data-ifade="dans">🕺 Dans</button>
+  <button data-ifade="hikaye">👻 Korku hikâyesi</button>
+</div>
+<div id="ipucu">Sürükle: döndür • Tekerlek: yakınlaş</div>
+<script type="module" src="/static/kamp.js"></script>
+</body>
+</html>
