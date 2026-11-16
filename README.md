@@ -1,92 +1,96 @@
-# 🔥 KampAteş Bot
+# Minecraft Topluluk Botu
 
-Oyun toplulukları için her şey dahil Discord botu. discord.js v14, slash komutları, sıfır harici veritabanı (Node'un yerleşik SQLite'ı).
+Minecraft sunucuları için her şey dahil Discord botu. Tek komutla tüm sunucuyu kurar; resimli kartlar, butonlar ve menülerle çalışır.
 
-Öne çıkan özellik: **3D kamp ateşi**. Bir ses kanalına giren herkes, tarayıcıda açılan canlı 3D sahnede ateşin etrafında oturur. Biri girip çıktıkça sahne güncellenir, kanal sohbetine yazılanlar konuşma balonu olur, odun atılır, marshmallow kızartılır.
+![logo](assets/logo.png)
 
-## Kurulum
+## Kurulum (Windows)
 
-Gereken: **Node.js 22.13 veya üstü**.
+1. **Node.js kur:** [nodejs.org](https://nodejs.org) → LTS sürümü (22.13 veya üstü).
+2. **Botu oluştur:** [discord.com/developers/applications](https://discord.com/developers/applications) → New Application → **Bot** sekmesi:
+   - **Reset Token** ile token'ı kopyala.
+   - **Server Members Intent** ve **Message Content Intent**'i aç. Açmazsan bot giriş yapamaz.
+3. **Sunucuna ekle:** OAuth2 → URL Generator → `bot` ve `applications.commands` kutuları, yetkilerden **Administrator**. Çıkan linki aç.
+4. **`baslat.bat` dosyasına çift tıkla.** İlk açılışta `.env` dosyasını oluşturup Not Defteri'nde açar:
+   - `DISCORD_TOKEN=` sonuna token'ı yapıştır.
+   - `GUILD_ID=` sonuna sunucu ID'ni yaz (Discord Ayarlar → Gelişmiş → Geliştirici Modu; sunucuya sağ tık → Sunucu ID'sini Kopyala).
+   - Kaydet, `baslat.bat`'ı tekrar aç. Paketleri kendisi kurar ve botu başlatır.
+5. **Discord'da `/kurulum adres:play.sunucun.com ad:SunucuAdı` yaz.** Roller, kategoriler, kanallar ve paneller kurulur.
+6. **Sunucu Ayarları → Roller'den botun rolünü en üste taşı.** Yoksa rol veremez.
 
-1. [Discord Developer Portal](https://discord.com/developers/applications) → New Application → **Bot** sekmesi:
-   - Token'ı kopyala.
-   - **Privileged Gateway Intents** altında **Server Members Intent** ve **Message Content Intent**'i aç. (Açılmazsa bot giriş yapamaz.)
-2. OAuth2 → URL Generator: `bot` + `applications.commands` kapsamlarını, yetki olarak **Administrator**'ı seç; çıkan linkle botu sunucuna ekle.
-3. Dosyaları hazırla:
-   ```
-   npm install
-   copy .env.example .env      (Linux/Mac: cp .env.example .env)
-   ```
-   `.env` içine `DISCORD_TOKEN` yaz. Komutların anında görünmesi için `GUILD_ID`'ye sunucu ID'ni yaz (boş bırakırsan global kayıt olur, yayılması 1 saate kadar sürebilir).
-4. Başlat: `npm start` (Windows'ta `baslat.bat`).
-5. Sunucuda **`/kurulum`** yaz: gerekli kanalları, cezalı rolünü ve "Oda Oluştur" / "Kamp Ateşi" ses kanallarını kendisi kurar.
-6. Botun rolünü rol listesinde **yukarı taşı** (yönettiği rollerin üstünde olmalı).
+Linux/VDS: `npm install && cp .env.example .env`, `.env`'i doldur, `npm start`.
 
-### Müzik için
-Ek kurulum gerekmez: ffmpeg paketle birlikte gelir. Şarkı adıyla/YouTube'dan çalmak için bot ilk kullanımda **yt-dlp** programını GitHub'daki resmî sürümünden `data/bin` klasörüne kendisi indirir. Bunu istemiyorsan `.env` içine `YTDLP_OTOMATIK_INDIR=0` yaz; radyolar ve doğrudan ses linkleri yine çalışır.
+Bot 7/24 açık kalsın istiyorsan bir VDS'te çalıştır; kendi bilgisayarında pencereyi kapatınca bot da kapanır.
 
-### İsteğe bağlı anahtarlar
-| Değişken | Ne için | Nereden |
-|---|---|---|
-| `FACEIT_API_KEY` | `/faceit` komutları ve maç takibi | developers.faceit.com → App Studio → API Keys (Server side) |
-| `STEAM_API_KEY` | `/steam` | steamcommunity.com/dev/apikey |
-| `PUBLIC_URL`, `WEB_PORT` | Kamp ateşi bağlantıları | Botu VDS'te çalıştırıyorsan `http://SUNUCU_IP:3000` yaz ve portu aç |
+## `/kurulum` ne kurar?
 
-> Kamp ateşi sayfası botun çalıştığı makineden sunulur. Bot kendi bilgisayarındaysa `localhost` bağlantısı yalnızca sende açılır; arkadaşlarının da görmesi için botu bir VDS'te çalıştır ya da portu dışarı aç ve `PUBLIC_URL`'i ona göre ayarla.
+- **Roller:** Üye, Oyuncu, Destek Ekibi, Cezalı ve seviye rütbeleri (Odun → Taş → Demir → Altın → Elmas → Netherite)
+- **📢 Bilgi:** kurallar (kabul butonlu), duyurular, sunucu-durumu (canlı panel), hoş-geldin, başvuru
+- **💬 Topluluk:** sohbet, ekran-görüntüleri, bot-komut, seviye, öneriler, yıldızlar, sayı-sayma, kelime-oyunu
+- **🔊 Ses:** ➕ Oda Oluştur, Genel Sohbet, Müzik
+- **🎫 Destek:** konu seçmeli talep paneli
+- **🛡️ Yetkili:** mod-log, başvurular, cezalı
+
+İkinci kez çalıştırırsan yalnızca eksikleri tamamlar.
 
 ## Özellikler
 
-### 🔥 Kamp ateşi (3D)
-- **Komut yazmaya gerek yok:** bir ses kanalına girince kanalın sohbetine kendiliğinden resimli kamp kartı düşer (kim ateş başında, ateş ne durumda, ne çalıyor). Karttaki butonlarla 3D sahne açılır, odun atılır, hatıra fotoğrafı çekilir, menüden radyo açılır. `/kamp otomatik` ile kapatılabilir
-- `/kamp aç` — aynı 3D bağlantıyı komutla verir (kişiye özel imzalı bağlantı)
-- Avatarlar Discord profil fotoğrafı, rol rengi, seviye, FACEIT seviyesi ve klan etiketiyle görünür; susturma/sağırlaştırma/yayın simgeleri canlıdır
-- İfadeler: selam, alkış, dans, odun at, marshmallow kızart, korku hikâyesi (ateş yeşile döner)
-- **Sunucu ateşi:** seste zaman geçtikçe ve odun atıldıkça büyür, kimse yokken söner. Her gün seste biri olursa **ateş serisi** uzar (`/kamp durum`)
+### ⛏️ Minecraft
+- `/sunucu` — canlı durum kartı: oyuncu sayısı, sürüm, gecikme, rekor, oyundakiler. Java ve Bedrock desteklenir
+- **Canlı panel** her dakika güncellenir; sunucu kapanınca/açılınca kanala bildirim düşer; botun durum yazısında oyuncu sayısı görünür
+- `/ip`, `/oy`, `/skin` — adres ve giriş rehberi, oy bağlantıları, oyuncu skini
+- `/hesap bağla` — Minecraft hesabı profil kartında oyuncu kafasıyla görünür
+- **Başvuru sistemi:** form → yetkili kanalı → Onayla/Reddet. Onayda Oyuncu rolü verilir, hesap bağlanır, üyeye özel mesaj gider
+- **RCON (isteğe bağlı):** onaylanan başvuru otomatik whitelist'e eklenir; marketten coin'le **oyun içi ödül** satılır (`/market ekle komut:give {oyuncu} diamond 5`); `/mc rcon` ile konsol komutu çalıştırılır
+
+### 🔊 Özel odalar
+**➕ Oda Oluştur** kanalına giren üyeye kendi odası açılır ve oraya taşınır. Odanın sohbetine resimli kontrol paneli düşer: kilitle, gizle, limit, isim, üyeye izin ver, at, devret. Sahip çıkınca oda sıradaki kişiye geçer; boşalınca silinir.
+
+### 📈 Seviye ve ekonomi
+- Mesaj ve ses XP'si, resimli `/profil` ve `/sıralama`, seviye atlama kartları, otomatik rütbe rolleri
+- Günlük görevler, 18 başarım, haftalık karne
+- `/günlük`, `/çalış`, `/gönder`, `/market`, `/kumar slot | yazıtura | blackjack`, klanlar
 
 ### 🎵 Müzik
-- `/müzik çal` — şarkı adı, YouTube linki/listesi ya da ses dosyası linki. `/müzik radyo` — canlı radyolar
-- Resimli "şimdi çalıyor" kartı ve butonlar: duraklat, geç, döngü, karıştır, durdur, ses, sıra
-- Müzik çalarken 3D sahnede ateşin yanında radyo belirir, herkes kafa sallar
+`/müzik çal` (şarkı adı, YouTube linki), `/müzik radyo`; butonlu "şimdi çalıyor" kartı.
+Şarkı araması için bot ilk kullanımda **yt-dlp** programını GitHub'daki resmî sürümünden `data/bin` klasörüne indirir. İstemiyorsan `.env` içine `YTDLP_OTOMATIK_INDIR=0` yaz; radyolar yine çalışır.
 
-### 🎯 Oyun
-- `/faceit profil` — resimli profil kartı (ELO, seviye, K/D, haritalar) ve butonlar
-- **Skor tablosu:** bir maçtaki 10 oyuncunun tamamı (K/D/A, K/D, ADR, HS%, MVP, ACE) tek resimde; sunucu üyeleri vurgulanır. `/faceit maçlar` menüsünden ya da profildeki butondan açılır
-- **Maç takibi:** hesabını bağlayanların biten maçları skor tablosuyla birlikte kanala düşer (ELO farkı, seviye atlama). 3 mağlubiyet üst üste gelince **tilt alarmı** verir
-- `/faceit karşılaştır | bağla | sıralama | roller`
-- Otomatik **FACEIT 1-10 rolleri**
-- `/oyun-sunucu sorgula | panel` — CS2/Source ve Minecraft sunucu durumu; her dakika güncellenen canlı panel
-- `/steam` — seviye, CS2 saati, VAC durumu
+### 🛡️ Moderasyon ve topluluk
+- Ban, kick, sustur, uyarı (3/5/7'de otomatik ceza), jail, toplu silme, kilit, yavaş mod, kayıt kanalı
+- Otomod: spam, davet/link, yasaklı kelime, büyük harf, toplu etiket, baskın koruması
+- Destek talepleri (dökümlü), çekiliş, anket, öneri, yıldız panosu, rol paneli, `/duyuru`
+- Minecraft bilgi yarışması, düello, nişan antrenmanı, sayı sayma, kelime zinciri
 
-### ⚔️ Rekabet
-- `/maç oluştur` — lobi → takım kurma (ELO dengeli / rastgele / kaptan seçimi) → **harita vetosu** → takım ses odaları → sonuç. Sunucu içi **ELO** ve sıralama
-- `/turnuva` — butonla kayıt, tek elemeli fikstür, bay geçişleri, şampiyon ödülü
-- `/takım-ara` — takım arkadaşı ilanı; kadro dolunca oda açılır
-- `/tahmin` — coin'le oynanan **tahmin borsası** (havuz, kazananlara oranla dağıtılır)
-- `/ödül koy` — **ödül avı**: birinin başına ödül koy, onu `/düello`'da yenen alır
+Tüm komutlar için `/yardım`.
 
-### 📈 Seviye, ekonomi, eğlence
-- Mesaj ve ses XP'si, seviye rolleri; resimli `/profil` kartı, menüden türü değişen resimli `/sıralama`, resimli seviye atlama ve hoş geldin kartları
-- **Haftanın karnesi:** her pazar akşamı haftanın en çok yazanı, seste en çok duranı ve en çok XP kazananı tek resimde; birincilere ödül
-- **Günlük görevler** (her üyeye her gün 3 farklı) ve 20 **başarım**
-- `/günlük` (seri bonuslu), `/çalış`, `/gönder`, `/market` (rol satışı, 2x XP), `/kumar slot | yazıtura | blackjack`
-- `/düello` (refleks), `/aim` (aim antrenmanı), `/trivia`, `/tkm`, sayı sayma ve kelime zinciri kanalları
-- `/klan` — klan kur, davet et, kasa, klan sıralaması
+## RCON'u açmak (isteğe bağlı)
 
-### 👥 Topluluk ve yönetim
-- Özel ses odaları ("Oda Oluştur"a gir → kendi odan, butonlu kontrol paneli)
-- Ticket sistemi (dökümlü), çekiliş, anket, öneri, yıldız panosu, rol paneli
-- `/hatırlat`, `/zaman-kapsülü`, `/afk`, `/doğumgünü`, davet takibi, `/nabız` (aktivite grafiği)
-- Moderasyon: ban, kick, sustur, uyarı (3/5/7'de otomatik ceza), jail, toplu silme, kilit, yavaş mod, kayıt kanalı
-- **Otomod:** spam, davet/link, yasaklı kelime, büyük harf, toplu etiket ve **baskın koruması**
+Minecraft sunucusunun `server.properties` dosyasında:
+```
+enable-rcon=true
+rcon.port=25575
+rcon.password=GucluBirSifre
+```
+Sunucuyu yeniden başlat, sonra botun `.env` dosyasına yaz:
+```
+MC_RCON_HOST=sunucu-ip
+MC_RCON_PORT=25575
+MC_RCON_PASSWORD=GucluBirSifre
+```
+RCON portunu internete açık bırakma; yalnızca botun çalıştığı makine erişebilsin.
 
-Tüm komutlar için sunucuda `/yardım` yaz.
+## Sorun giderme
+
+| Belirti | Çözüm |
+|---|---|
+| "Used disallowed intents" / giriş yapamadı | Developer Portal → Bot → iki intent'i aç |
+| Komutlar görünmüyor | `.env` içinde `GUILD_ID` doğru mu? Botu `applications.commands` kapsamıyla ekledin mi? |
+| Özel oda açılmıyor | Mod-log kanalına sebep yazılır. Botta **Kanalları Yönet**, **Üyeleri Taşı**, **Rolleri Yönet** olmalı; `/ayar göster` ile oda kanalını kontrol et |
+| Rol verilmiyor | Bot rolünü rol listesinde en üste taşı |
+| Sunucu çevrimdışı görünüyor | `/mc ayarla` ile adres ve türü (Java/Bedrock) kontrol et |
 
 ## Geliştirme
 ```
-npm test                      # Discord'a bağlanmadan duman testleri
-node test/kamp-onizleme.js    # 3D sahneyi sahte üyelerle tarayıcıda aç
-node test/kart-onizleme.js    # tüm resim kartlarını örnek veriyle data/onizleme klasörüne çiz
+npm test                     # sahte Discord, Minecraft ve RCON sunucularıyla testler
+node test/kart-onizleme.js   # resim kartlarını data/onizleme klasörüne çizer
 ```
-Yapı: `src/core` (veritabanı, oyuncu servisi, yardımcılar), `src/modules` (her özellik bir dosya; komut/buton/olay tanımları), `src/web` (kamp ateşi sunucusu ve Three.js istemcisi). Veriler `data/bot.sqlite` dosyasında tutulur.
-
-Eski discord.js v12 botu `legacy/` klasöründe duruyor.

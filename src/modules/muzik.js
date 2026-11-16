@@ -14,7 +14,7 @@ const { E, R, hata, tamam, yanit, karistir, kisalt } = require('../core/util');
 const RADYOLAR = {
   lofi: ['Lofi (çalışma/sohbet)', 'https://ice1.somafm.com/fluid-128-mp3'],
   chill: ['Groove Salad (chill)', 'https://ice1.somafm.com/groovesalad-128-mp3'],
-  kamp: ['Kamp ateşi (akustik/folk)', 'https://ice1.somafm.com/folkfwd-128-mp3'],
+  akustik: ['Akustik / Folk', 'https://ice1.somafm.com/folkfwd-128-mp3'],
   synth: ['Synthwave', 'https://ice1.somafm.com/synphaera-128-mp3'],
   rock: ['Indie Rock', 'https://ice1.somafm.com/indiepop-128-mp3'],
   metal: ['Metal', 'https://ice1.somafm.com/metal-128-mp3'],
@@ -26,7 +26,7 @@ const RADYOLAR = {
 };
 const radyolar = (g) => ({ ...RADYOLAR, ...db.ayar(g, 'muzik.radyolar', {}) });
 const oturumlar = new Map(); // guild -> oturum
-const dinleyiciler = new Set(); // şarkı değişince haber verilecekler (kamp ateşi sahnesi)
+const dinleyiciler = new Set();
 const haberVer = (g) => { for (const fn of dinleyiciler) try { fn(g); } catch { /* yoksay */ } };
 
 // ---------- yt-dlp ----------
@@ -190,7 +190,6 @@ module.exports = {
   RADYOLAR, radyoMenu,
   simdiCalan: (g, c) => { const o = oturumlar.get(g); return o && (!c || o.sesKanal === c) ? o.simdi?.baslik || null : null; },
   degisince: (fn) => dinleyiciler.add(fn),
-  // Kamp kartındaki radyo menüsü de bunu kullanır
   async radyoAc(i, anahtar) {
     if (!denetle(i, false)) return;
     const r = radyolar(i.guild.id)[anahtar];

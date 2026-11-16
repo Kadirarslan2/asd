@@ -14,9 +14,27 @@ async function davetleriYukle(guild) {
   return harita;
 }
 
+const KURALLAR = ['Herkese saygılı ol; küfür, hakaret ve ayrımcılık yasak.', 'Hile, makro, x-ray ve hata (bug) istismarı yasaktır.', 'Başkalarının yapılarına zarar verme (grief) ve hırsızlık yapma.', 'Reklam ve başka sunucu davetleri paylaşma.', 'Spam, flood ve gereksiz etiket atma.', 'Hesap güvenliğin senin sorumluluğunda; şifreni kimseyle paylaşma.', 'Yetkililerin kararlarına uy; itirazın varsa destek talebi aç.'];
+async function kurallarPanelGonder(kanal) {
+  const liste = db.ayar(kanal.guild.id, 'kurallar', KURALLAR);
+  return kanal.send({ files: [await cizim.bannerKart({ ust: 'OKUMADAN GEÇME', baslik: 'Sunucu Kuralları', alt: 'Discord ve Minecraft sunucumuzda geçerlidir', logo: true, dosya: 'kurallar' })],
+    embeds: [E(null, liste.map((k, n) => `**${n + 1}.** ${k}`).join('\n\n'), R.ana).setImage('attachment://kurallar.png').setFooter({ text: 'Kuralları kabul edince Üye rolünü alırsın' })],
+    components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('kural:kabul').setLabel('Kuralları okudum, kabul ediyorum').setEmoji('✅').setStyle(ButtonStyle.Success))] });
+}
+
 module.exports = {
   ad: 'karsilama',
+  kurallarPanelGonder,
   komutlar: [
+    { data: new SlashCommandBuilder().setName('kurallar-panel').setDescription('[Yönetici] Bu kanala butonlu kurallar panelini gönderir').setDefaultMemberPermissions(P.ManageGuild)
+        .addStringOption((o) => o.setName('kurallar').setDescription('Kendi kuralların: her kuralı | ile ayır (boşsa hazır kurallar)').setMaxLength(1800)),
+      calistir: async (i) => {
+        const ozel = i.options.getString('kurallar')?.split('|').map((k) => k.trim()).filter(Boolean);
+        if (ozel?.length) db.ayarYaz(i.guild.id, 'kurallar', ozel.slice(0, 20));
+        await i.deferReply({ flags: 64 });
+        await kurallarPanelGonder(i.channel);
+        return i.editReply('Kurallar paneli gönderildi.');
+      } },
     { data: new SlashCommandBuilder().setName('davetler').setDescription('Davet istatistikleri')
         .addUserOption((o) => o.setName('üye').setDescription('Bu üyenin davetleri (boşsa sıralama)')),
       calistir: (i) => {
@@ -28,6 +46,13 @@ module.exports = {
       } },
   ],
   bilesenler: {
+    kural: async (i) => {
+      const rol = db.ayar(i.guild.id, 'rol.uye');
+      if (!rol || !i.guild.roles.cache.has(rol)) return i.reply({ content: '✅ Kuralları kabul ettin, iyi eğlenceler!', flags: 64 });
+      if (i.member.roles.cache.has(rol)) return i.reply({ content: 'Kuralları zaten kabul etmişsin ✅', flags: 64 });
+      const oldu = await i.member.roles.add(rol).then(() => true, () => false);
+      return i.reply({ content: oldu ? `✅ Kuralları kabul ettin ve <@&${rol}> rolünü aldın. \`/ip\` ile sunucu adresini öğrenebilirsin!` : '⚠️ Rolü veremedim; yetkililere haber ver (bot rolü daha üstte olmalı).', flags: 64 });
+    },
     // "Selam ver" butonu: yeni üyeyi karşılayan herkes küçük bir ödül alır (üye başına bir kez)
     selamla: async (i, [hedefId]) => {
       if (i.user.id === hedefId) return i.reply({ content: 'Kendine selam veremezsin 🙂', flags: 64 });
@@ -60,7 +85,7 @@ module.exports = {
       if (otoRol && !m.user.bot) await m.roles.add(otoRol).catch(() => {});
       const kanal = g.channels.cache.get(db.ayar(g.id, 'kanal.hosgeldin'));
       if (!kanal) return;
-      const sablon = db.ayar(g.id, 'hosgeldin.mesaj', 'Hoş geldin {üye}! Seninle birlikte **{sayı}** kişi olduk. Ateşin başında yerin hazır 🔥');
+      const sablon = db.ayar(g.id, 'hosgeldin.mesaj', 'Hoş geldin {üye}! Seninle birlikte **{sayı}** kişi olduk. Kuralları okuyup `/ip` ile sunucuya katılabilirsin ⛏️');
       const metin = sablon.replaceAll('{üye}', `${m}`).replaceAll('{sunucu}', g.name).replaceAll('{sayı}', String(g.memberCount));
       const kart = await cizim.bannerKart({ ust: 'HOŞ GELDİN', baslik: m.displayName, alt: `${g.name}  •  ${sayi(g.memberCount)}. üye`, avatarUrl: m.user.displayAvatarURL({ extension: 'png', size: 256 }), ad: m.displayName, dosya: 'hosgeldin' });
       await kanal.send({ content: `${metin}${davetEden ? `\n📨 Davet eden: <@${davetEden}> (+100 🪙)` : ''}`, files: [kart],

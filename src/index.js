@@ -1,7 +1,7 @@
-// KampAteş Bot — giriş noktası: modülleri yükler, komutları kaydeder, olayları dağıtır
+// Minecraft topluluk botu — giriş noktası: modülleri yükler, komutları kaydeder, olayları dağıtır
 const fs = require('node:fs');
 const path = require('node:path');
-const { Client, GatewayIntentBits, Partials, Events, ActivityType } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, Events } = require('discord.js');
 const config = require('./core/config');
 const db = require('./core/db');
 const { hata } = require('./core/util');
@@ -90,14 +90,20 @@ function baslat() {
       }
     };
     setInterval(tik('hizliTik'), 15_000); // çekiliş bitişi, hatırlatıcı vb.
-    setInterval(tik('tik'), 60_000);      // ses XP'si, ateş, paneller
-    const durumlar = ['/yardım', '🔥 /kamp ile ateş başına', '🎯 /faceit profil', '⚔️ /maç oluştur'];
-    let d = 0;
-    setInterval(() => client.user.setActivity(durumlar[d++ % durumlar.length], { type: ActivityType.Playing }), 30_000);
+    setInterval(tik('tik'), 60_000);      // ses XP'si, sunucu durumu, paneller
+    // Logoyu bir kez botun profil fotoğrafı yap
+    if (!db.ayar('_', 'logo')) {
+      await client.user.setAvatar(require('./core/cizim').logoDosya(512)).then(() => { db.ayarYaz('_', 'logo', 1); console.log('✅ Logo botun profil fotoğrafı yapıldı'); }).catch((e) => console.error('Logo ayarlanamadı:', e.message));
+    }
   });
 
   process.on('unhandledRejection', (e) => console.error('Yakalanmamış hata:', e));
-  client.login(config.token);
+  client.login(config.token).catch((e) => {
+    if (/disallowed intents/i.test(e.message)) console.error('❌ Bot giriş yapamadı: Developer Portal > Bot sayfasında "Server Members Intent" ve "Message Content Intent" açık olmalı.');
+    else if (/invalid token|TokenInvalid/i.test(e.message + e.code)) console.error('❌ Bot giriş yapamadı: .env dosyasındaki DISCORD_TOKEN geçersiz. Developer Portal > Bot > Reset Token ile yenisini al.');
+    else console.error('❌ Bot giriş yapamadı:', e.message);
+    process.exit(1);
+  });
 }
 
 if (require.main === module) baslat();

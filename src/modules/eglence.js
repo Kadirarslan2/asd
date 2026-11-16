@@ -5,31 +5,31 @@ const oyuncu = require('../core/oyuncu');
 const { E, R, yanit, hata, para, rast, sec, karistir } = require('../core/util');
 
 const SORULAR = [
-  ['CS2\'de bombanın patlama süresi kaç saniyedir?', ['40', '35', '45', '30']],
-  ['Hangi harita CS serisinin en eski bomba haritalarından biridir?', ['Dust II', 'Ancient', 'Anubis', 'Vertigo']],
-  ['Valorant\'ta bir takımda kaç oyuncu bulunur?', ['5', '6', '4', '3']],
-  ['Minecraft\'ta Nether portalı hangi bloktan yapılır?', ['Obsidyen', 'Elmas', 'Netherrack', 'Taş']],
-  ['League of Legends\'ta haritanın adı nedir?', ['Sihirdar Vadisi', 'Uçurum', 'Kristal Koru', 'Ruh Çiçeği']],
-  ['FACEIT\'te en yüksek seviye kaçtır?', ['10', '20', '8', '15']],
-  ['CS2\'de AWP\'nin fiyatı kaç dolardır?', ['4750', '4500', '5000', '4250']],
-  ['"The cake is a lie" sözü hangi oyundandır?', ['Portal', 'Half-Life', 'Bioshock', 'Fallout']],
-  ['GTA V\'te kaç oynanabilir ana karakter vardır?', ['3', '2', '4', '1']],
-  ['Hangi şirket Fortnite\'ı geliştirdi?', ['Epic Games', 'Valve', 'Riot Games', 'Ubisoft']],
-  ['Dota 2\'de bir maçta toplam kaç kahraman seçilir?', ['10', '8', '12', '5']],
-  ['The Witcher serisinin ana karakteri kimdir?', ['Geralt', 'Vesemir', 'Jaskier', 'Eskel']],
-  ['CS\'de "eco" turu ne demektir?', ['Para biriktirmek için az harcama', 'Hızlı saldırı', 'Sadece bıçak', 'Savunma taktiği']],
-  ['Rocket League\'de standart maçta top kaç araçla oynanır (toplam)?', ['6', '4', '8', '10']],
-  ['Valve\'ın dağıtım platformunun adı nedir?', ['Steam', 'Origin', 'Uplay', 'Battle.net']],
-  ['Among Us\'ta hain oyuncuya ne denir?', ['Impostor', 'Traitor', 'Spy', 'Hunter']],
-  ['Minecraft\'ın yaratıcısı kimdir?', ['Notch', 'Jeb', 'Gabe Newell', 'Dinnerbone']],
-  ['CS2\'de bir yarıda (MR12) kaç tur oynanır?', ['12', '15', '13', '16']],
-  ['Hangi oyun "battle royale" türünü popülerleştiren ilk büyük yapımlardandır?', ['PUBG', 'Overwatch', 'Destiny', 'Paladins']],
-  ['Valorant\'ta spike\'ı kim kurar?', ['Saldıran takım', 'Savunan takım', 'Her iki takım', 'Hakem']],
-  ['Elden Ring\'i hangi stüdyo geliştirdi?', ['FromSoftware', 'CD Projekt', 'Bethesda', 'Capcom']],
-  ['CS\'de "ace" ne anlama gelir?', ['Tek oyuncunun 5 rakibi öldürmesi', 'İlk kanı almak', 'Bombayı çözmek', 'Bıçakla öldürmek']],
-  ['Hangisi bir MOBA oyunudur?', ['Dota 2', 'Apex Legends', 'Rust', 'Tarkov']],
-  ['Pac-Man\'deki hayaletlerden biri hangisidir?', ['Blinky', 'Bowser', 'Ganon', 'Ridley']],
-  ['Half-Life\'ın ana karakteri kimdir?', ['Gordon Freeman', 'Alyx Vance', 'Barney', 'G-Man']],
+  ['Nether portalı hangi bloktan yapılır?', ['Obsidyen', 'Elmas bloğu', 'Netherrack', 'Ağlayan obsidyen']],
+  ['Minecraft\'ın yaratıcısı kimdir?', ['Notch', 'Jeb', 'Dinnerbone', 'Herobrine']],
+  ['Ender Ejderhası\'nı çağırmak için kaç Ender Gözü gerekir (boş portalda)?', ['12', '9', '16', '8']],
+  ['Creeper\'ları hangi hayvan korkutur?', ['Kedi', 'Kurt', 'Tavuk', 'Tilki']],
+  ['Elmas kazmak için en az hangi kazma gerekir?', ['Demir kazma', 'Taş kazma', 'Altın kazma', 'Tahta kazma']],
+  ['Bir yığın (stack) en fazla kaç eşya alır?', ['64', '100', '32', '99']],
+  ['Hangi yaratık ışınlanabilir?', ['Enderman', 'Zombi', 'İskelet', 'Örümcek']],
+  ['Büyü masasını tam güce çıkarmak için kaç kitaplık gerekir?', ['15', '10', '20', '12']],
+  ['Wither\'ı çağırmak için kaç Wither iskelet kafası gerekir?', ['3', '1', '4', '5']],
+  ['Netherite hangi cevherden elde edilir?', ['Antik kalıntı', 'Kızıltaş', 'Zümrüt cevheri', 'Kuvars']],
+  ['Hangisi yenince açlığı en çok dolduran yemeklerdendir?', ['Pişmiş biftek', 'Elma', 'Kurabiye', 'Havuç']],
+  ['Köylülerle takasta kullanılan para birimi nedir?', ['Zümrüt', 'Elmas', 'Altın külçe', 'Demir']],
+  ['Bir günlük Minecraft döngüsü gerçek hayatta kaç dakikadır?', ['20', '10', '30', '24']],
+  ['Elytra nerede bulunur?', ['End gemisinde', 'Nether kalesinde', 'Okyanus anıtında', 'Orman malikanesinde']],
+  ['Hangi blok yerçekiminden etkilenir?', ['Kum', 'Toprak', 'Kırıktaş', 'Tahta']],
+  ['Kırmızı taş (redstone) sinyali en fazla kaç blok ilerler?', ['15', '10', '20', '32']],
+  ['Demir golem yapmak için kaç demir bloğu gerekir?', ['4', '3', '5', '2']],
+  ['Hangi yaratık suda zarar görür?', ['Enderman', 'Creeper', 'Zombi', 'Boğulmuş']],
+  ['Yıldırım çarpan domuz neye dönüşür?', ['Zombi piglin', 'Hoglin', 'Ravager', 'Wither']],
+  ['Balkabağını kafana takarsan hangi yaratık sana saldırmaz?', ['Enderman', 'Creeper', 'Cadı', 'Hayalet']],
+  ['Minecraft\'ın ilk tam sürümü (1.0) hangi yıl çıktı?', ['2011', '2009', '2013', '2010']],
+  ['İksir yapmak için hangi blok kullanılır?', ['Simya standı', 'Büyü masası', 'Örs', 'Fırın']],
+  ['Totem of Undying hangi yaratıktan düşer?', ['Evoker', 'Vindicator', 'Pillager', 'Cadı']],
+  ['Hangi biyomda mantar inekleri (mooshroom) yaşar?', ['Mantar adası', 'Bataklık', 'Tayga', 'Savana']],
+  ['Bir işaretçi (beacon) için hangi eşya gerekir?', ['Nether yıldızı', 'Ejderha yumurtası', 'Ender incisi', 'Blaze çubuğu']],
 ];
 
 const duellolar = new Map(), aimler = new Map(), triviaAcik = new Map();
@@ -84,14 +84,14 @@ module.exports = {
         if (sonuc === 1) { db.arttir(i.guild.id, i.user.id, 'para', 20); await oyuncu.gorevIlerle(i.guild, i.user.id, 'oyun', 1, i.channel); }
         return yanit(i, E(null, `Sen: **${A[ben]}** • Ben: **${A[bot]}**\n${['🤝 Berabere!', `🎉 Kazandın! +${para(20)}`, '😎 Ben kazandım!'][sonuc]}`, [R.gri, R.ok, R.hata][sonuc]));
       } },
-    { data: new SlashCommandBuilder().setName('aim').setDescription('Aim antrenmanı: 8 hedefi olabildiğince hızlı vur'),
+    { data: new SlashCommandBuilder().setName('aim').setDescription('Nişan antrenmanı: 8 hedefi olabildiğince hızlı vur'),
       calistir: async (i) => {
         const a = { uid: i.user.id, hedef: rast(0, 19), vurus: 0, iska: 0, sureler: [], son: 0 };
         aimler.set(i.user.id, a);
         await i.reply({ embeds: [E('🎯 Aim Antrenmanı', '8 hedef çıkacak. 🎯 butonuna olabildiğince hızlı bas, boş karelere basma!')], components: aimIzgara(a) });
         a.son = Date.now();
       } },
-    { data: new SlashCommandBuilder().setName('trivia').setDescription('Oyun kültürü sorusu — ilk doğru cevaplayan ödülü alır'),
+    { data: new SlashCommandBuilder().setName('trivia').setDescription('Minecraft bilgi yarışması — ilk doğru cevaplayan ödülü alır'),
       calistir: async (i) => {
         if (triviaAcik.has(i.channelId)) return hata(i, 'Bu kanalda zaten açık bir soru var.');
         const [soru, siklar] = sec(SORULAR);
@@ -99,11 +99,11 @@ module.exports = {
         const t = { dogru: karisik.findIndex((x) => x.dogru), deneyen: new Set(), siklar: karisik.map((x) => x.s) };
         triviaAcik.set(i.channelId, t);
         const butonlar = () => satir(...t.siklar.map((s, k) => buton(`trivia:${k}`, s.slice(0, 80), ButtonStyle.Primary)));
-        await i.reply({ embeds: [E('🧠 Trivia', `**${soru}**\n\nİlk doğru cevap ${para(75)} kazanır. Herkesin tek hakkı var! (20 sn)`, R.bilgi)], components: [butonlar()] });
+        await i.reply({ embeds: [E('🧠 Bilgi Yarışması', `**${soru}**\n\nİlk doğru cevap ${para(75)} kazanır. Herkesin tek hakkı var! (20 sn)`, R.bilgi)], components: [butonlar()] });
         setTimeout(async () => {
           if (triviaAcik.get(i.channelId) !== t) return;
           triviaAcik.delete(i.channelId);
-          await i.editReply({ embeds: [E('🧠 Trivia', `**${soru}**\n\n⏰ Süre doldu! Doğru cevap: **${t.siklar[t.dogru]}**`, R.gri)], components: [] }).catch(() => {});
+          await i.editReply({ embeds: [E('🧠 Bilgi Yarışması', `**${soru}**\n\n⏰ Süre doldu! Doğru cevap: **${t.siklar[t.dogru]}**`, R.gri)], components: [] }).catch(() => {});
         }, 20_000);
       } },
   ],
@@ -161,7 +161,7 @@ module.exports = {
       if (Number(k) !== t.dogru) return hata(i, 'Yanlış cevap!');
       triviaAcik.delete(i.channelId);
       db.arttir(i.guild.id, i.user.id, 'para', 75);
-      await i.update({ embeds: [E('🧠 Trivia', `${i.message.embeds[0].description.split('\n')[0]}\n\n✅ ${i.user} doğru bildi: **${t.siklar[t.dogru]}** → +${para(75)}`, R.ok)], components: [] });
+      await i.update({ embeds: [E('🧠 Bilgi Yarışması', `${i.message.embeds[0].description.split('\n')[0]}\n\n✅ ${i.user} doğru bildi: **${t.siklar[t.dogru]}** → +${para(75)}`, R.ok)], components: [] });
       await oyuncu.gorevIlerle(i.guild, i.user.id, 'trivia', 1, i.channel);
       await oyuncu.sayac(i.guild, i.user.id, 'trivia', 1, 20, 'bilgin', i.channel);
     },

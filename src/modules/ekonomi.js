@@ -3,8 +3,9 @@ const { SlashCommandBuilder, PermissionFlagsBits: P, ActionRowBuilder, ButtonBui
 const db = require('../core/db');
 const oyuncu = require('../core/oyuncu');
 const { E, R, yanit, hata, tamam, sayi, para, rast, sec, karistir, gun, sureYaz, madalya } = require('../core/util');
+const rcon = require('../core/rcon');
 
-const ISLER = ['CS2 sunucusunda adminlik yaptın', 'Turnuvada yayın moderatörlüğü yaptın', 'Yeni başlayanlara smoke öğrettin', 'LAN partisi için kablo çektin', 'Kasa açıp skin sattın', 'Takım için demo analizi yaptın', 'Kamp ateşi için odun topladın', 'Minecraft sunucusuna spawn inşa ettin'];
+const ISLER = ['Madene inip elmas çıkardın', 'Köylülerle zümrüt takası yaptın', 'Buğday tarlasını hasat ettin', 'Spawn alanına yol döşedin', 'Creeper patlamasını tamir ettin', 'Nether\'dan kuvars taşıdın', 'Balık tutup pazarda sattın', 'Yeni oyunculara ev yapmayı öğrettin', 'Mob çiftliğinde nöbet tuttun', 'Büyü masasında kitap büyüledin'];
 const bahisSec = (b) => b.addIntegerOption((o) => o.setName('bahis').setDescription('Bahis miktarı').setRequired(true).setMinValue(10).setMaxValue(50000));
 
 function bahisAl(i, miktar) {
@@ -97,9 +98,11 @@ module.exports = {
     { data: new SlashCommandBuilder().setName('market').setDescription('Sunucu marketi')
         .addSubcommand((s) => s.setName('liste').setDescription('Ürünleri listeler'))
         .addSubcommand((s) => s.setName('al').setDescription('Ürün satın alır').addStringOption((o) => o.setName('ürün').setDescription('Ürün').setRequired(true).setAutocomplete(true)))
-        .addSubcommand((s) => s.setName('ekle').setDescription('[Yönetici] Markete rol ürünü ekler')
-          .addRoleOption((o) => o.setName('rol').setDescription('Satılacak rol').setRequired(true))
-          .addIntegerOption((o) => o.setName('fiyat').setDescription('Fiyat').setRequired(true).setMinValue(1)))
+        .addSubcommand((s) => s.setName('ekle').setDescription('[Yönetici] Markete rol ya da oyun içi ödül (konsol komutu) ekler')
+          .addIntegerOption((o) => o.setName('fiyat').setDescription('Fiyat').setRequired(true).setMinValue(1))
+          .addStringOption((o) => o.setName('ad').setDescription('Ürün adı (örn: 5 Elmas)').setMaxLength(40))
+          .addRoleOption((o) => o.setName('rol').setDescription('Verilecek Discord rolü'))
+          .addStringOption((o) => o.setName('komut').setDescription('Oyun içi komut, örn: give {oyuncu} diamond 5').setMaxLength(200)))
         .addSubcommand((s) => s.setName('sil').setDescription('[Yönetici] Marketten ürün kaldırır').addStringOption((o) => o.setName('ürün').setDescription('Ürün').setRequired(true).setAutocomplete(true))),
       tamamla: (i) => {
         const yazi = i.options.getFocused().toLowerCase();
@@ -107,17 +110,21 @@ module.exports = {
       },
       calistir: async (i) => {
         const alt = i.options.getSubcommand(), g = i.guild.id;
-        if (alt === 'liste') return yanit(i, E('🛒 Market', urunler(g).map((u) => `**${u.ad}** — ${para(u.fiyat)}${u.rol ? ` → <@&${u.rol}>` : ''}`).join('\n') + '\n\nSatın almak için: `/market al`', R.altin));
+        if (alt === 'liste') return yanit(i, E('🛒 Market', urunler(g).map((u) => `**${u.ad}** — ${para(u.fiyat)}${u.rol ? ` → <@&${u.rol}>` : ''}${u.komut ? ' • *oyun içi teslim*' : ''}`).join('\n') + '\n\nSatın almak için: `/market al`\n*Oyun içi ürünler için önce `/hesap bağla` ile Minecraft hesabını bağla ve sunucuda çevrimiçi ol.*', R.altin));
         if (alt === 'ekle' || alt === 'sil') {
           if (!i.memberPermissions.has(P.ManageGuild)) return hata(i, 'Bunun için **Sunucuyu Yönet** yetkisi gerekir.');
           const l = db.ayar(g, 'market', []);
           if (alt === 'ekle') {
-            const rol = i.options.getRole('rol');
-            if (rol.managed || rol.position >= i.guild.members.me.roles.highest.position) return hata(i, 'Bu rolü veremem; rolümü onun üstüne taşı.');
-            if (l.length >= 24) return hata(i, 'Market dolu (en fazla 24 ürün).');
-            l.push({ id: `rol${rol.id}`, ad: `🎭 ${rol.name}`, fiyat: i.options.getInteger('fiyat'), rol: rol.id });
+            const rol = i.options.getRole('rol'), komut = i.options.getString('komut')?.trim().replace(/^\//, ''), ad = i.options.getString('ad')?.trim();
+            if (!rol && !komut) return hata(i, 'Bir `rol` ya da oyun içi `komut` belirt.');
+            if (rol && (rol.managed || rol.position >= i.guild.members.me.roles.highest.position)) return hata(i, 'Bu rolü veremem; rolümü onun üstüne taşı.');
+            if (komut && !i.memberPermissions.has(P.Administrator)) return hata(i, 'Konsol komutlu ürünleri yalnızca **Yönetici** ekleyebilir.');
+            if (komut && !komut.includes('{oyuncu}')) return hata(i, 'Komutta `{oyuncu}` yer tutucusu olmalı. Örnek: `give {oyuncu} diamond 5`');
+            if (komut && !ad) return hata(i, 'Komutlu ürün için bir `ad` gir.');
+            if (l.length >= 23) return hata(i, 'Market dolu (en fazla 23 ürün).');
+            l.push({ id: `u${Date.now().toString(36)}`, ad: ad || `🎭 ${rol.name}`, fiyat: i.options.getInteger('fiyat'), rol: rol?.id, komut });
             db.ayarYaz(g, 'market', l);
-            return tamam(i, `${rol} markete eklendi.`, true);
+            return tamam(i, `**${ad || rol.name}** markete eklendi.${komut && !rcon.hazir() ? '\n⚠️ RCON ayarlı değil; bu ürün `.env` içine MC_RCON bilgileri girilene kadar satılamaz.' : ''}`, true);
           }
           const id = i.options.getString('ürün');
           db.ayarYaz(g, 'market', l.filter((u) => u.id !== id));
@@ -125,8 +132,18 @@ module.exports = {
         }
         const urun = urunler(g).find((u) => u.id === i.options.getString('ürün'));
         if (!urun) return hata(i, 'Ürün bulunamadı. Listeden seç.');
-        if (urun.rol && i.member.roles.cache.has(urun.rol)) return hata(i, 'Bu role zaten sahipsin.');
+        if (urun.rol && !urun.komut && i.member.roles.cache.has(urun.rol)) return hata(i, 'Bu role zaten sahipsin.');
+        const nick = db.uye(g, i.user.id).mc_nick;
+        if (urun.komut) {
+          if (!nick || !rcon.nickGecerli(nick)) return hata(i, 'Bu ürün oyun içinde teslim edilir. Önce `/hesap bağla` ile Minecraft hesabını bağla.');
+          if (!rcon.hazir()) return hata(i, 'Oyun içi teslimat şu an kapalı (RCON ayarlı değil). Yetkililere haber ver.');
+        }
         if (!bahisAl(i, urun.fiyat)) return;
+        if (urun.komut) {
+          await i.deferReply();
+          try { await rcon.calistir(urun.komut.replaceAll('{oyuncu}', nick)); }
+          catch (e) { db.arttir(g, i.user.id, 'para', urun.fiyat); return i.editReply({ embeds: [E(null, `❌ Teslim edilemedi, paran iade edildi. (${e.message})`, R.hata)] }); }
+        }
         if (urun.rol) {
           const oldu = await i.member.roles.add(urun.rol).then(() => true).catch(() => false);
           if (!oldu) { db.arttir(g, i.user.id, 'para', urun.fiyat); return hata(i, 'Rolü veremedim, paran iade edildi.'); }

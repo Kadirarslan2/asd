@@ -10,16 +10,19 @@ const bekleme = new Map(); // mesaj XP'si için 45 sn bekleme
 const avatarUrl = (u) => u.displayAvatarURL({ extension: 'png', size: 256 });
 const satir = (...b) => new ActionRowBuilder().addComponents(...b);
 
+// Seviyeye göre Minecraft rütbesi (Odun → Netherite)
+function rutbe(seviye) { const RENK = ['#b98a5e', '#b6bcc2', '#e6e6e6', '#ffd166', '#5eead4', '#a78bb5']; const l = require('./genel').RUTBELER; let r = null; l.forEach(([lvl, ad], k) => { if (seviye >= lvl) r = { ad: ad.toLocaleUpperCase('tr'), renk: RENK[k] }; }); return r; }
+
 async function profilMesaj(guild, user) {
   const u = db.uye(guild.id, user.id), s = oyuncu.seviyeHesapla(u.xp);
   const member = await guild.members.fetch(user.id).catch(() => null);
   const klan = u.veri.klan && db.belge.al(u.veri.klan);
   const kart = await cizim.profilKart({ ad: member?.displayName || user.username, avatar: avatarUrl(member || user), renk: member?.displayHexColor && member.displayHexColor !== '#000000' ? member.displayHexColor : null,
-    seviye: s.seviye, sira: db.sira(guild.id, user.id, 'xp'), kalan: s.kalan, gereken: s.gereken, para: u.para, mesaj: u.mesaj, ses: u.ses, rep: u.rep, elo: u.elo, g: u.galibiyet, m: u.maglubiyet,
-    basarim: (u.veri.basarim || []).length, basarimToplam: Object.keys(oyuncu.BASARIMLAR).length, klan: klan?.etiket, boost: u.veri.boost > Date.now(),
-    faceit: u.faceit_nick ? { lvl: u.faceit_lvl, elo: u.faceit_elo, nick: u.faceit_nick } : null });
+    seviye: s.seviye, sira: db.sira(guild.id, user.id, 'xp'), kalan: s.kalan, gereken: s.gereken, para: u.para, mesaj: u.mesaj, ses: u.ses, rep: u.rep,
+    seri: u.veri.gunluk?.gun === gun() || u.veri.gunluk?.gun === gun(Date.now() - 864e5) ? u.veri.gunluk.seri : 0,
+    basarim: (u.veri.basarim || []).length, basarimToplam: Object.keys(oyuncu.BASARIMLAR).length, klan: klan?.etiket, boost: u.veri.boost > Date.now(), mc: u.mc_nick, rutbe: rutbe(s.seviye) });
   const b = (id, ad, emoji) => new ButtonBuilder().setCustomId(`profil:${id}:${user.id}`).setLabel(ad).setEmoji(emoji).setStyle(ButtonStyle.Secondary);
-  return { files: [kart], components: [satir(b('gorev', 'Görevler', '📜'), b('basarim', 'Başarımlar', '🏅'), b('yenile', 'Yenile', '🔄'), ...(u.faceit_nick ? [b('faceit', 'FACEIT', '🎯')] : []))] };
+  return { files: [kart], components: [satir(b('gorev', 'Görevler', '📜'), b('basarim', 'Başarımlar', '🏅'), b('yenile', 'Yenile', '🔄'))] };
 }
 function gorevEmbed(guildId, user) {
   const g = oyuncu.gorevDurum(guildId, user.id);
@@ -37,12 +40,11 @@ function basarimEmbed(guildId, user) {
 }
 
 const TURLER = { xp: ['Seviye', (u) => [`Seviye ${u.seviye}`, `${sayi(u.xp)} XP`], '📈'], para: ['Zenginler', (u) => [`${sayi(u.para)} coin`], '🪙'], ses: ['Ses', (u) => [cizim.sure(u.ses)], '🎙️'],
-  mesaj: ['Mesaj', (u) => [`${sayi(u.mesaj)} mesaj`], '💬'], rep: ['İtibar', (u) => [`${u.rep} itibar`], '⭐'], elo: ['Sunucu ELO', (u) => [`${u.elo} ELO`, `${u.galibiyet}G / ${u.maglubiyet}M`], '⚔️'],
-  faceit_elo: ['FACEIT ELO', (u) => [`${sayi(u.faceit_elo)} ELO`, `Seviye ${u.faceit_lvl} • ${u.faceit_nick}`], '🎯'] };
+  mesaj: ['Mesaj', (u) => [`${sayi(u.mesaj)} mesaj`], '💬'], rep: ['İtibar', (u) => [`${u.rep} itibar`], '⭐'] };
 
 async function siralamaMesaj(guild, tur, userId) {
   const [baslik, fmt] = TURLER[tur];
-  const l = db.sirala(guild.id, tur, 10, tur === 'elo' ? 'AND (galibiyet + maglubiyet) > 0' : '');
+  const l = db.sirala(guild.id, tur, 10);
   const uyeler = l.length ? await guild.members.fetch({ user: l.map((u) => u.user) }).catch(() => null) : null;
   const kart = await cizim.siralamaKart({ baslik: `${baslik} Sıralaması`, altBaslik: guild.name, ben: `Senin sıran: #${db.sira(guild.id, userId, tur)}`,
     satirlar: l.map((u) => { const m = uyeler?.get(u.user), [deger, alt] = fmt(u); return { ad: m?.displayName || `Üye ${u.user.slice(-4)}`, avatar: m ? avatarUrl(m) : null, deger, alt }; }) });
@@ -65,9 +67,9 @@ async function haftalikKarne(guild) {
   const idler = [...new Set(Object.values(secilen).flat().map((u) => u.user))];
   const uyeler = idler.length ? await guild.members.fetch({ user: idler }).catch(() => null) : null;
   const sat = (l, fmt) => l.map((u) => { const m = uyeler?.get(u.user); return { ad: m?.displayName || `Üye ${u.user.slice(-4)}`, avatar: m ? avatarUrl(m) : null, deger: fmt(u) }; });
-  const bit = new Date(), bas = new Date(Date.now() - 6 * 864e5), ates = db.ayar(guild.id, 'ates');
+  const bit = new Date(), bas = new Date(Date.now() - 6 * 864e5);
   const kart = await cizim.haftalikKart({ sunucu: guild.name, tarih: `${bas.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} - ${bit.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}`,
-    ozet: [['MESAJ', sayi(toplamMesaj)], ['SES SAATİ', sayi(toplamSes / 3600)], ['AKTİF ÜYE', sayi(fark.filter((u) => u.mesaj > 0 || u.ses > 0).length)], ['ATEŞ SERİSİ', `${ates?.seri || 0} gün`]],
+    ozet: [['MESAJ', sayi(toplamMesaj)], ['SES SAATİ', sayi(toplamSes / 3600)], ['AKTİF ÜYE', sayi(fark.filter((u) => u.mesaj > 0 || u.ses > 0).length)], ['OYUNCU REKORU', sayi(db.ayar(guild.id, 'mc.rekor', 0))]],
     bolumler: [{ baslik: 'EN ÇOK YAZANLAR', satirlar: sat(secilen.mesaj, (u) => `${sayi(u.mesaj)} mesaj`) }, { baslik: 'SESİN KRALLARI', satirlar: sat(secilen.ses, (u) => cizim.sure(u.ses)) }, { baslik: 'EN ÇOK XP', satirlar: sat(secilen.xp, (u) => `${sayi(u.xp)} XP`) }] });
   // Haftanın birincilerine ödül
   for (const l of Object.values(secilen)) if (l[0]) db.arttir(guild.id, l[0].user, 'para', 500);
@@ -132,7 +134,6 @@ module.exports = {
       if (!user) return hata(i, 'Üye bulunamadı.');
       if (islem === 'gorev') return yanit(i, gorevEmbed(i.guild.id, user), true);
       if (islem === 'basarim') return yanit(i, basarimEmbed(i.guild.id, user), true);
-      if (islem === 'faceit') return require('./faceit').profilGonder(i, uid);
       await i.deferUpdate();
       return i.editReply({ ...(await profilMesaj(i.guild, user)), attachments: [] });
     },

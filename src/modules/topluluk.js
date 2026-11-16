@@ -201,7 +201,7 @@ module.exports = {
       for (const { user } of liste) {
         if (!(await g.members.fetch(user).catch(() => null))) continue;
         db.arttir(g.id, user, 'para', 500);
-        await kanal?.send({ content: `<@${user}>`, embeds: [E('🎂 İyi ki doğdun!', `Bugün <@${user}> kullanıcısının doğum günü! Hediyen: **500** 🪙\nHerkes ateşin başına toplansın 🔥`, R.altin)] }).catch(() => {});
+        await kanal?.send({ content: `<@${user}>`, embeds: [E('🎂 İyi ki doğdun!', `Bugün <@${user}> kullanıcısının doğum günü! Hediyen: **500** 🪙\nHerkes pasta kessin 🍰`, R.altin)] }).catch(() => {});
       }
     }
   },

@@ -1,6 +1,6 @@
 const { EmbedBuilder, MessageFlags } = require('discord.js');
 
-const R = { ana: 0xff7a18, ok: 0x2ecc71, hata: 0xe74c3c, bilgi: 0x3498db, altin: 0xf1c40f, mor: 0x9b59b6, gri: 0x95a5a6 };
+const R = { ana: 0x2ee66b, ok: 0x2ecc71, hata: 0xe74c3c, bilgi: 0x3498db, altin: 0xf1c40f, mor: 0x9b59b6, gri: 0x95a5a6 };
 const E = (baslik, aciklama, renk = R.ana) => {
   const e = new EmbedBuilder().setColor(renk);
   if (baslik) e.setTitle(String(baslik).slice(0, 256));

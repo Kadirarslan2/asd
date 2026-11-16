@@ -10,9 +10,6 @@ module.exports = {
   kok,
   token: process.env.DISCORD_TOKEN || '',
   guildId: process.env.GUILD_ID || '',
-  faceitKey: process.env.FACEIT_API_KEY || '',
-  steamKey: process.env.STEAM_API_KEY || '',
-  port: Number(process.env.WEB_PORT || 3000),
-  publicUrl: (process.env.PUBLIC_URL || 'http://localhost:3000').replace(/\/$/, ''),
+  rcon: { host: process.env.MC_RCON_HOST || '', port: Number(process.env.MC_RCON_PORT || 25575), sifre: process.env.MC_RCON_PASSWORD || '' },
   dbYol: process.env.DB_PATH || path.join(kok, 'data', 'bot.sqlite'),
 };

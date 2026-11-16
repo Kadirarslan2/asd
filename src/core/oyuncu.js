@@ -11,26 +11,24 @@ function seviyeHesapla(xp) {
 }
 
 const BASARIMLAR = {
-  ilkmesaj: ['💬', 'İlk Adım', 'İlk mesajını gönder'],
-  seviye5: ['🌱', 'Filiz', '5. seviyeye ulaş'],
-  seviye10: ['⚔️', 'Savaşçı', '10. seviyeye ulaş'],
-  seviye25: ['👑', 'Efsane', '25. seviyeye ulaş'],
-  ses10: ['🎙️', 'Sohbet Kuşu', 'Seste 10 saat geçir'],
-  ses100: ['📻', 'Radyo', 'Seste 100 saat geçir'],
-  gecekusu: ['🦉', 'Gece Kuşu', 'Gece 03:00-05:00 arası seste ol'],
-  zengin: ['💰', 'Zengin', '10.000 coin biriktir'],
-  jackpot: ['🎰', 'Jackpot', 'Slotta büyük ikramiyeyi vur'],
-  atesbekcisi: ['🔥', 'Ateş Bekçisi', 'Kamp ateşine 50 odun at'],
-  duellocu: ['🤠', 'Silahşör', '10 düello kazan'],
-  faceit: ['🎯', 'Bağlantı Kuruldu', 'FACEIT hesabını bağla'],
-  seri7: ['📅', 'Sadık', '7 gün üst üste günlük ödül al'],
-  sampiyon: ['🏆', 'Şampiyon', 'Bir turnuva kazan'],
-  scrim10: ['🎮', 'Scrim Kurdu', '10 sunucu içi maç kazan'],
+  ilkmesaj: ['💬', 'Spawn Noktası', 'İlk mesajını gönder'],
+  seviye5: ['🪵', 'Odun Toplayıcı', '5. seviyeye ulaş'],
+  seviye10: ['⛏️', 'Madenci', '10. seviyeye ulaş'],
+  seviye25: ['💎', 'Elmas Avcısı', '25. seviyeye ulaş'],
+  seviye50: ['🐉', 'Ejderha Katili', '50. seviyeye ulaş'],
+  ses10: ['🎙️', 'Köylü Muhabbeti', 'Seste 10 saat geçir'],
+  ses100: ['📻', 'Müzik Kutusu', 'Seste 100 saat geçir'],
+  gecekusu: ['🦇', 'Phantom', 'Gece 03:00-05:00 arası seste ol'],
+  zengin: ['💰', 'Zümrüt Tüccarı', '10.000 coin biriktir'],
+  jackpot: ['🎰', 'Şans Büyüsü III', 'Slotta büyük ikramiyeyi vur'],
+  duellocu: ['⚔️', 'PvP Ustası', '10 düello kazan'],
+  hesap: ['🔗', 'Kimlik Kartı', 'Minecraft hesabını bağla'],
+  seri7: ['📅', 'Sadık Oyuncu', '7 gün üst üste günlük ödül al'],
   gorevci: ['📜', 'Görev Adamı', '25 günlük görev tamamla'],
-  keskin: ['🎯', 'Keskin Nişancı', 'Aim antrenmanında 300ms altı ortalama yap'],
+  keskin: ['🏹', 'Okçu', 'Nişan antrenmanında 300ms altı ortalama yap'],
   comert: ['🎁', 'Cömert', 'Başkasına toplam 5.000 coin gönder'],
-  kahin: ['🔮', 'Kâhin', '5 tahmini doğru bil'],
-  bilgin: ['🧠', 'Bilgin', '20 trivia sorusunu doğru cevapla'],
+  bilgin: ['🧠', 'Kütüphaneci', '20 bilgi yarışması sorusunu doğru cevapla'],
+  onayli: ['✅', 'Whitelist', 'Başvurun onaylansın'],
 };
 
 const GOREVLER = {
@@ -38,11 +36,10 @@ const GOREVLER = {
   ses: ['🎙️', 'Seste 30 dakika geçir', 30, 200],
   oyun: ['🎲', 'Bir mini oyun/kumar kazan', 1, 150],
   gunluk: ['📅', 'Günlük ödülünü al', 1, 100],
-  odun: ['🪵', 'Kamp ateşine 3 odun at', 3, 150],
   rep: ['⭐', 'Birine itibar puanı ver', 1, 120],
-  trivia: ['🧠', '2 trivia sorusunu doğru bil', 2, 180],
-  calis: ['⛏️', '2 kez çalış', 2, 130],
-  aim: ['🎯', 'Bir aim antrenmanı tamamla', 1, 120],
+  trivia: ['🧠', '2 bilgi yarışması sorusunu doğru bil', 2, 180],
+  calis: ['⛏️', '2 kez madene in (/çalış)', 2, 130],
+  aim: ['🏹', 'Bir nişan antrenmanı tamamla', 1, 120],
 };
 
 // Her kullanıcıya her gün belirlenimci (tarih+id tohumlu) 3 görev
@@ -100,6 +97,7 @@ const oyuncu = {
     if (seviye >= 5) await oyuncu.basarimVer(guild, userId, 'seviye5', kanal);
     if (seviye >= 10) await oyuncu.basarimVer(guild, userId, 'seviye10', kanal);
     if (seviye >= 25) await oyuncu.basarimVer(guild, userId, 'seviye25', kanal);
+    if (seviye >= 50) await oyuncu.basarimVer(guild, userId, 'seviye50', kanal);
   },
 
   async basarimVer(guild, userId, id, kanal = null) {
