@@ -333,10 +333,10 @@ const hataMi = (i) => i.yanitlar.some((p) => p.flags === MessageFlags.Ephemeral 
     assert.ok(hataMi(await kos('market', veli, { alt: 'al', secenek: { ürün: urun.id } })), 'doğrulanmamış hesaba teslim yok');
     await kos('hesap', veli, { alt: 'bağla', secenek: { oyuncu: 'Veli_MC' } }); await kodGir(veli, sonKod('Veli_MC'));
     db.arttir(G, 'veli', 'para', 150 - db.uye(G, 'veli').para); // veli'nin bakiyesi tam 150 olsun
-    rconKomutlar.length = 0;
+    await bekle(200); rconKomutlar.length = 0; // bağlanma sonrası arka planda giden "hoş geldin" mesajı bitsin
     await kos('market', veli, { alt: 'al', secenek: { ürün: urun.id } });
-    assert.deepEqual(rconKomutlar, ['give Veli_MC diamond 5']); assert.equal(db.uye(G, 'veli').para, 50);
-    assert.ok(hataMi(await kos('market', veli, { alt: 'al', secenek: { ürün: urun.id } })), 'para yetmez'); assert.equal(rconKomutlar.length, 1);
+    assert.deepEqual(rconKomutlar.filter((k) => !k.startsWith('tellraw')), ['give Veli_MC diamond 5']); assert.equal(db.uye(G, 'veli').para, 50);
+    assert.ok(hataMi(await kos('market', veli, { alt: 'al', secenek: { ürün: urun.id } })), 'para yetmez'); assert.equal(rconKomutlar.filter((k) => k.startsWith('give')).length, 1);
     await new Promise((r) => rconSrv.close(r));
     db.arttir(G, 'veli', 'para', 100);
     const i = await kos('market', veli, { alt: 'al', secenek: { ürün: urun.id } });
