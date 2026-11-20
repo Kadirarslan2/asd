@@ -13,6 +13,7 @@ const { E, R, yanit, hata, tamam, zd, sayi } = require('../core/util');
 const config = require('../core/config');
 const ayar = (g) => { const a = db.ayar(g, 'mc', {}); return { ...a, ad: a.ad || config.sunucu.ad, adres: a.adres || config.sunucu.adres, tur: a.tur || config.sunucu.tur }; };
 const onbellek = new Map(); // guild -> { t, veri }
+const uyarildi = new Set();
 const satir = (...b) => new ActionRowBuilder().addComponents(...b);
 const linkBtn = (ad, url, emoji) => new ButtonBuilder().setLabel(ad).setURL(url).setStyle(ButtonStyle.Link).setEmoji(emoji);
 const urlGecerli = (u) => /^https:\/\/[^\s<>"]{4,200}$/i.test(u || '');
@@ -24,12 +25,28 @@ async function durumAl(guild, zorla = false) {
   const o = onbellek.get(guild.id);
   if (!zorla && o && Date.now() - o.t < 30_000) return o.veri;
   let veri;
-  try {
-    const s = await sorgula(a.tur, a.adres);
-    const rekor = Math.max(db.ayar(guild.id, 'mc.rekor', 0), s.oyuncu);
+  // 1) Görünen adres  2) .env'deki MC_SORGU_ADRES (bot ile sunucu aynı makinedeyse 127.0.0.1:25565)
+  // 3) RCON "list" — sunucu konsolu yanıt veriyorsa sunucu açıktır
+  const adresler = [...new Set([config.sunucu.sorgu, a.adres].filter(Boolean))];
+  let sonHata = null;
+  for (const adres of adresler) {
+    try { veri = { acik: true, ...(await sorgula(a.tur, adres)) }; break; } catch (e) { sonHata = e; }
+  }
+  if (!veri && rcon.hazir()) {
+    const bas = Date.now();
+    try { const l = await rcon.liste(); veri = { acik: true, tur: a.tur, motd: '', surum: a.surum || 'Paper', ikon: null, ping: Date.now() - bas, kaynak: 'rcon', ...l }; } catch { /* sunucu gerçekten kapalı olabilir */ }
+  }
+  if (veri) {
+    const rekor = Math.max(db.ayar(guild.id, 'mc.rekor', 0), veri.oyuncu);
     if (rekor > db.ayar(guild.id, 'mc.rekor', 0)) db.ayarYaz(guild.id, 'mc.rekor', rekor);
-    veri = { acik: true, ...s, rekor };
-  } catch (e) { veri = { acik: false, sebep: e.message }; }
+    veri.rekor = rekor;
+  } else {
+    veri = { acik: false, sebep: sonHata?.message || 'Sunucuya ulaşılamadı.' };
+    if (!uyarildi.has(guild.id)) {
+      uyarildi.add(guild.id);
+      console.warn(`⚠️ Minecraft sunucusuna ulaşılamadı (${a.adres}): ${veri.sebep}\n   Bot ile Minecraft sunucusu aynı bilgisayardaysa .env dosyasına MC_SORGU_ADRES=127.0.0.1:25565 yaz (modemler çoğu zaman kendi dış adresine bağlanmaya izin vermez) ya da RCON bilgilerini gir.`);
+    }
+  }
   veri = { ...veri, ad: a.ad || guild.name, adres: a.adres };
   onbellek.set(guild.id, { t: Date.now(), veri });
   return veri;
@@ -230,7 +247,7 @@ module.exports = {
         await kanal.messages.edit(p.mesaj, await durumMesaj(guild)).catch((e) => { if (e.code === 10008) db.belge.sil(p.id); });
       }
     }
-    ctx.client.user?.setActivity(ilk ? (ilk.acik ? `${ilk.oyuncu}/${ilk.max} oyuncu • ${ilk.adres}` : `${ilk.adres} • bakımda`) : '/yardım • /kurulum', { type: ilk ? ActivityType.Watching : ActivityType.Playing });
+    ctx.client.user?.setActivity(ilk?.acik ? `${ilk.oyuncu}/${ilk.max} oyuncu • ${ilk.adres}` : `${ilk?.adres || 'auracraft.net.tr'} • /yardım`, { type: ilk?.acik ? ActivityType.Watching : ActivityType.Playing });
   },
   hazir: (ctx) => module.exports.tik(ctx),
 };

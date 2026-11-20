@@ -13,7 +13,7 @@ const KATEGORILER = {
   '👥 Topluluk': ['klan', 'anket', 'öneri', 'hatırlat', 'zaman-kapsülü', 'afk', 'doğumgünü', 'davetler'],
   '🛡️ Moderasyon': ['ban', 'kick', 'sustur', 'susturma-kaldır', 'uyar', 'uyarılar', 'uyarı-sil', 'sil', 'jail', 'unjail', 'yavaşmod', 'kilit', 'otomod'],
   '🎮 Oyun Yönetimi': ['oyun', 'mc', 'hesap-ayar'],
-  '⚙️ Yönetim': ['kurulum', 'ayar', 'duyuru', 'çekiliş', 'ticket-panel', 'kurallar-panel', 'rol-panel', 'seviye-rol', 'karne', 'nabız'],
+  '⚙️ Yönetim': ['teşhis', 'kurulum', 'ayar', 'duyuru', 'çekiliş', 'ticket-panel', 'kurallar-panel', 'rol-panel', 'seviye-rol', 'karne', 'nabız'],
   'ℹ️ Bilgi': ['yardım', 'ping', 'avatar', 'sunucu-bilgi', 'kullanıcı'],
 };
 const KANAL_AYAR = {
@@ -212,6 +212,39 @@ module.exports = {
         const hedef = alt === 'rol' ? i.options.getRole('rol') : i.options.getChannel('kanal');
         db.ayarYaz(g, `${alt}.${i.options.getString('tür')}`, hedef?.id ?? null);
         return tamam(i, hedef ? `Ayarlandı → ${hedef}` : 'Ayar kapatıldı.', true);
+      } },
+    { data: new SlashCommandBuilder().setName('teşhis').setDescription('Botun neden çalışmadığını kontrol eder: komutlar, yetkiler, Minecraft, RCON').setDefaultMemberPermissions(P.ManageGuild),
+      calistir: async (i, ctx) => {
+        await i.deferReply({ flags: 64 });
+        const config = require('../core/config'), rcon = require('../core/rcon'), mc = require('./minecraft');
+        const satir = [], ok = (v) => (v ? '✅' : '❌');
+        // Komutlar
+        const kayitli = await i.guild.commands.fetch().catch(() => null);
+        satir.push(`${ok(kayitli?.size === ctx.komutlar.size)} **Komutlar:** ${kayitli ? `${kayitli.size}/${ctx.komutlar.size} kayıtlı` : 'okunamadı'}${config.guildId && config.guildId !== i.guild.id ? `\n   ⚠️ .env içindeki GUILD_ID (${config.guildId}) bu sunucunun ID'si değil (${i.guild.id}). Düzeltip botu yeniden başlat.` : ''}`);
+        // Yetkiler
+        const ben = i.guild.members.me;
+        const GEREK = [[P.Administrator, 'Yönetici'], [P.ManageChannels, 'Kanalları Yönet'], [P.ManageRoles, 'Rolleri Yönet'], [P.MoveMembers, 'Üyeleri Taşı'], [P.ModerateMembers, 'Üyelere Zaman Aşımı'], [P.BanMembers, 'Üyeleri Yasakla'], [P.ManageMessages, 'Mesajları Yönet'], [P.EmbedLinks, 'Bağlantı Yerleştir'], [P.AttachFiles, 'Dosya Ekle']];
+        const eksik = ben.permissions.has(P.Administrator) ? [] : GEREK.slice(1).filter(([f]) => !ben.permissions.has(f)).map(([, ad]) => ad);
+        satir.push(`${ok(!eksik.length)} **Bot yetkileri:** ${eksik.length ? `eksik → ${eksik.join(', ')}` : 'tamam'}`);
+        const ustRoller = i.guild.roles.cache.filter((r) => r.position > ben.roles.highest.position && !r.managed).size;
+        satir.push(`${ok(ustRoller === 0)} **Bot rolünün sırası:** ${ustRoller ? `${ustRoller} rol botun üstünde. Sunucu Ayarları → Roller'den bot rolünü en üste sürükle.` : 'en üstte'}`);
+        // Kanal yetkisi
+        const buKanal = i.channel?.permissionsFor?.(ben);
+        if (buKanal) satir.push(`${ok(buKanal.has(P.SendMessages) && buKanal.has(P.EmbedLinks) && buKanal.has(P.AttachFiles))} **Bu kanal:** ${buKanal.has(P.SendMessages) && buKanal.has(P.EmbedLinks) && buKanal.has(P.AttachFiles) ? 'mesaj, bağlantı ve dosya gönderebiliyorum' : 'bu kanalda mesaj/dosya gönderme iznim eksik'}`);
+        // Minecraft
+        const a = mc.ayar(i.guild.id);
+        mc.onbellekSil(i.guild.id);
+        const d = await mc.durumAl(i.guild, true);
+        satir.push(`${ok(d.acik)} **Minecraft (${a.adres}):** ${d.acik ? `açık, ${d.oyuncu}/${d.max} oyuncu${d.kaynak === 'rcon' ? ' (RCON üzerinden; ping atılamadı)' : ''}` : `ulaşılamadı → ${d.sebep}\n   Bot ile Minecraft aynı bilgisayardaysa .env'e \`MC_SORGU_ADRES=127.0.0.1:25565\` yaz. Değilse adresin ve portun doğru, sunucunun açık olduğundan emin ol.`}`);
+        // RCON
+        if (!rcon.hazir()) satir.push('⚠️ **RCON:** ayarlı değil → hesap doğrulama, oyun içi ödül ve oyun yönetimi kapalı. `.env` → `MC_RCON_HOST`, `MC_RCON_PASSWORD`');
+        else {
+          const r = await rcon.calistir('list').then(() => null, (e) => e.message);
+          satir.push(`${ok(!r)} **RCON (${config.rcon.host}:${config.rcon.port}):** ${r || 'bağlantı çalışıyor'}`);
+        }
+        satir.push(`${ok(i.guild.channels.cache.has(db.ayar(i.guild.id, 'kanal.log')))} **Kurulum:** ${i.guild.channels.cache.has(db.ayar(i.guild.id, 'kanal.log')) ? 'yapılmış' : 'yapılmamış → `/kurulum` yaz'}`);
+        const sorunlu = satir.filter((x) => x.startsWith('❌')).length;
+        return i.editReply({ embeds: [E(`🩺 Teşhis — ${sorunlu ? `${sorunlu} sorun bulundu` : 'her şey yolunda'}`, satir.join('\n\n'), sorunlu ? R.altin : R.ok).setFooter({ text: `Discord gecikmesi ${Math.round(i.client.ws.ping)}ms • Node ${process.versions.node}` })] });
       } },
     { data: new SlashCommandBuilder().setName('nabız').setDescription('Sunucunun son 24 saatlik aktivite grafiğini gösterir'),
       calistir: (i) => {

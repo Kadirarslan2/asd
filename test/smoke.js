@@ -5,7 +5,7 @@ const dgram = require('node:dgram');
 const net = require('node:net');
 const { MessageFlags, Collection, PermissionFlagsBits: P, ChannelType } = require('discord.js');
 const config = require('../src/core/config');
-const { modulleriYukle } = require('../src/index');
+const { modulleriYukle, komutlariKaydet, etkilesimIsle } = require('../src/index');
 const db = require('../src/core/db');
 const oyuncu = require('../src/core/oyuncu');
 const util = require('../src/core/util');
@@ -94,6 +94,24 @@ const hataMi = (i) => i.yanitlar.some((p) => p.flags === MessageFlags.Ephemeral 
     png(await cizim.odaKart({ ad: 'oda', sahip: '😀', kisi: 2, limit: 5, kilitli: true, gizli: true }));
     png(await cizim.muzikKart({ baslik: 'Şarkı', kanal: 'Sanatçı', sure: 200, isteyen: 'x', sira: 2 }));
     png(await cizim.bannerKart({ ust: 'DUYURU', baslik: 'Başlık', alt: 'alt', logo: true })); png(cizim.yardimKart('Sunucu', 9, 61));
+  });
+
+  console.log('Başlangıç ve teşhis');
+  await test('komutlar sunucuya kaydedilir, eski global komutlar silinir; GUILD_ID yanlışsa yine de kaydedilir', async () => {
+    const kayit = [], g1 = { id: 'a', name: 'A', commands: { set: async (v) => kayit.push(['a', v.length]) } }, g2 = { id: 'b', name: 'B', commands: { set: async () => { throw Object.assign(new Error('Missing Access'), { code: 50001 }); } } };
+    let globalSilindi = false;
+    const client = { guilds: { cache: new Collection([['a', g1], ['b', g2]]) }, application: { commands: { fetch: async () => new Collection([['x', {}]]), set: async (v) => { globalSilindi = v.length === 0; } } } };
+    const hatalar = [], ce = console.error, cl = console.log; console.error = (...a) => hatalar.push(a.join(' ')); console.log = () => {};
+    try { config.guildId = 'yanlis'; await komutlariKaydet(client, [{}, {}]); } finally { config.guildId = ''; console.error = ce; console.log = cl; }
+    assert.ok(globalSilindi, 'eski global komutlar silinmeli'); assert.deepEqual(kayit, [['a', 2]]);
+    assert.ok(hatalar.some((h) => /GUILD_ID .*botun bulunduğu sunuculardan biri değil/.test(h))); assert.ok(hatalar.some((h) => /applications.commands/.test(h)), 'yetki hatasında ne yapılacağı yazılmalı');
+  });
+  await test('eski sürümden kalan komut ve butonlar sessiz kalmaz, açıklamalı yanıt verir', async () => {
+    const i = etkilesim(guild, ali, { komut: 'kamp' });
+    Object.assign(i, { isChatInputCommand: () => true, isAutocomplete: () => false, inGuild: () => true, isRepliable: () => true });
+    await etkilesimIsle(i, ctx); assert.ok(hataMi(i)); assert.match(duzMetin(i), /eski bir sürümden/);
+    const b = etkilesim(guild, ali, { tur: 'buton' }); Object.assign(b, { customId: 'faceit:x', isChatInputCommand: () => false, isAutocomplete: () => false, isRepliable: () => true });
+    await etkilesimIsle(b, ctx); assert.ok(hataMi(b));
   });
 
   console.log('Kurulum');
@@ -283,6 +301,27 @@ const hataMi = (i) => i.yanitlar.some((p) => p.flags === MessageFlags.Ephemeral 
     rconKomutlar.length = 0;
     await kos('duyuru', yonetici, { secenek: { başlık: 'Etkinlik', metin: 'Saat 20:00', 'oyuna-da': true } });
     assert.equal(rconKomutlar.length, 1); assert.match(rconKomutlar[0], /^tellraw @a .*Saat 20:00/);
+  });
+  await test('sunucuya ping atılamazsa MC_SORGU_ADRES, o da olmazsa RCON ile açık görünür; durum yazısında "bakımda" yok', async () => {
+    const mc = require('../src/modules/minecraft');
+    await kos('mc', yonetici, { alt: 'ayarla', secenek: { adres: '127.0.0.1:1' } }); mc.onbellekSil(G);
+    let d = await mc.durumAl(guild, true);
+    assert.ok(d.acik && d.kaynak === 'rcon' && d.oyuncu === 3 && d.max === 20, JSON.stringify(d));
+    const yedek = net.createServer((c) => { c.on('error', () => {}); c.once('data', () => { const j = Buffer.from(JSON.stringify({ version: { name: 'Paper' }, players: { online: 7, max: 50 }, description: 'x' })); const g = Buffer.concat([vi(0), vi(j.length), j]); c.write(Buffer.concat([vi(g.length), g])); }); });
+    await new Promise((r) => yedek.listen(0, '127.0.0.1', r));
+    config.sunucu.sorgu = `127.0.0.1:${yedek.address().port}`;
+    d = await mc.durumAl(guild, true); assert.ok(d.acik && d.oyuncu === 7 && d.adres === '127.0.0.1:1');
+    config.sunucu.sorgu = ''; yedek.close();
+    let durum = ''; const c2 = { ...ctx, client: { ...ctx.client, user: { setActivity: (t) => { durum = t; } } } };
+    const host = config.rcon.host; config.rcon.host = ''; mc.onbellekSil(G); await mc.tik(c2); config.rcon.host = host;
+    assert.ok(!/bakım/.test(durum), durum); assert.match(durum, /\/yardım/);
+  });
+  await test('/teşhis sorunları listeler', async () => {
+    guild.commands = { fetch: async () => new Collection(y.komutlar) };
+    guild.members.me.permissions.has = (f) => f !== P.Administrator && f !== P.MoveMembers;
+    const i = await kos('teşhis', yonetici);
+    guild.members.me.permissions.has = () => true;
+    const m = duzMetin(i); assert.match(m, /Üyeleri Taşı/); assert.match(m, /RCON/); assert.match(m, /Komutlar/);
   });
   await test('market: konsol komutlu ürün oyun içinde teslim edilir; hesap bağlı değilse ya da para yoksa satılmaz', async () => {
     assert.ok(hataMi(await kos('market', yonetici, { alt: 'ekle', secenek: { fiyat: 100, ad: 'x', komut: 'give @a diamond 64' } })), '{oyuncu} zorunlu');

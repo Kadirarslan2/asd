@@ -97,6 +97,9 @@ Tüm komutlar için `/yardım`.
 
 | Belirti | Çözüm |
 |---|---|
+| Bir şey çalışmıyor | Discord'da **`/teşhis`** yaz: komutları, yetkileri, Minecraft bağlantısını ve RCON'u tek tek kontrol eder |
+| Sunucu kapalı görünüyor ama açık | Bot ile Minecraft aynı bilgisayardaysa `.env`'e `MC_SORGU_ADRES=127.0.0.1:25565` yaz (modemler kendi dış adresine bağlanmaya çoğu zaman izin vermez). RCON ayarlıysa bot sunucuyu oradan da görür |
+| Komut tıklayınca "uygulama yanıt vermedi" | Eski sürümün komutları kalmış olabilir: bot açılışta onları siler; Discord'da **Ctrl+R** ile listeyi yenile |
 | "Used disallowed intents" / giriş yapamadı | Developer Portal → Bot → iki intent'i aç |
 | Komutlar görünmüyor | `.env` içinde `GUILD_ID` doğru mu? Botu `applications.commands` kapsamıyla ekledin mi? |
 | Hesap bağlarken "doğrulanmadı" diyor | RCON ayarlı değil; `.env`'e RCON bilgilerini gir, botu yeniden başlat |

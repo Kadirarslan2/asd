@@ -27,6 +27,62 @@ function modulleriYukle() {
   return { moduller, komutlar, bilesenler, olaylar };
 }
 
+// Komutları sunucu bazında kaydeder (anında görünür). Eski sürümlerden kalan global komutları siler:
+// onlar listede durup tıklanınca "uygulama yanıt vermedi" hatası verir.
+const KAYIT_IPUCU = {
+  50001: 'Botun bu sunucuda komut ekleme izni yok. Botu sunucudan atıp Developer Portal > OAuth2 > URL Generator ile "bot" ve "applications.commands" seçerek yeniden ekle.',
+  10004: 'Bu ID ile bir sunucu bulunamadı. .env içindeki GUILD_ID yanlış olabilir.',
+  30034: 'Discord günlük komut oluşturma sınırına ulaşıldı. Birkaç saat sonra botu yeniden başlat.',
+};
+async function sunucuyaKaydet(guild, veri) {
+  try {
+    await guild.commands.set(veri);
+    console.log(`✅ ${veri.length} komut "${guild.name}" sunucusuna kaydedildi`);
+    return true;
+  } catch (e) {
+    console.error(`❌ "${guild.name}" sunucusuna komut kaydedilemedi (${e.code || e.message}). ${KAYIT_IPUCU[e.code] || e.message}`);
+    return false;
+  }
+}
+async function komutlariKaydet(client, veri) {
+  try {
+    const globaller = await client.application.commands.fetch();
+    if (globaller.size) { await client.application.commands.set([]); console.log(`🧹 Eski sürümden kalan ${globaller.size} global komut silindi (Discord'da Ctrl+R ile listeyi yenile)`); }
+  } catch (e) { console.error('Global komutlar temizlenemedi:', e.message); }
+  if (config.guildId && !client.guilds.cache.has(config.guildId)) {
+    console.error(`❌ .env içindeki GUILD_ID (${config.guildId}) botun bulunduğu sunuculardan biri değil. Bot şu sunucularda: ${[...client.guilds.cache.values()].map((g) => `${g.name} (${g.id})`).join(', ') || 'hiçbiri — botu sunucuna davet et'}. Komutlar botun bulunduğu tüm sunuculara kaydediliyor.`);
+  }
+  const hedefler = config.guildId && client.guilds.cache.has(config.guildId) ? [client.guilds.cache.get(config.guildId)] : [...client.guilds.cache.values()];
+  if (!hedefler.length) console.error('❌ Bot hiçbir sunucuda değil. Developer Portal > OAuth2 > URL Generator ile davet linki oluşturup botu sunucuna ekle.');
+  for (const g of hedefler) await sunucuyaKaydet(g, veri);
+}
+
+async function etkilesimIsle(i, ctx) {
+  try {
+    if (i.isChatInputCommand() || i.isAutocomplete()) {
+      const k = ctx.komutlar.get(i.commandName);
+      if (!k) {
+        // Eski bir sürümden kalmış, artık olmayan komut: sessiz kalırsa Discord "uygulama yanıt vermedi" gösterir
+        if (i.isAutocomplete()) return i.respond([]);
+        return hata(i, `\`/${i.commandName}\` eski bir sürümden kalmış ve artık yok. Discord'u yeniden başlatırsan (Ctrl+R) komut listesi yenilenir. Tüm komutlar için \`/yardım\`.`);
+      }
+      if (i.isAutocomplete()) return k.tamamla ? await k.tamamla(i, ctx) : i.respond([]);
+      if (!i.inGuild()) return hata(i, 'Bu bot yalnızca sunucularda çalışır.');
+      return await k.calistir(i, ctx);
+    }
+    if (i.isMessageComponent() || i.isModalSubmit()) {
+      const [onek, ...arg] = i.customId.split(':');
+      const fn = ctx.bilesenler.get(onek);
+      if (fn) return await fn(i, arg, ctx);
+      return hata(i, 'Bu buton eski bir sürümden kalmış. İlgili komutu tekrar kullan.');
+    }
+  } catch (e) {
+    console.error('Etkileşim hatası:', i.commandName || i.customId, e);
+    const mesaj = e?.code === 50013 ? 'Bunu yapmak için yetkim yok. Rolümün yeterince yukarıda ve gerekli izinlere sahip olduğundan emin ol. (`/teşhis`)' : 'Beklenmeyen bir hata oluştu. Yetkililer `/teşhis` ile kontrol edebilir.';
+    if (i.isRepliable()) await hata(i, mesaj).catch(() => {});
+  }
+}
+
 function baslat() {
   if (!config.token) {
     console.error('❌ DISCORD_TOKEN bulunamadı. .env.example dosyasını .env olarak kopyalayıp token\'ı gir.');
@@ -52,35 +108,13 @@ function baslat() {
     });
   }
 
-  client.on(Events.InteractionCreate, async (i) => {
-    try {
-      if (i.isChatInputCommand() || i.isAutocomplete()) {
-        const k = y.komutlar.get(i.commandName);
-        if (!k) return;
-        if (i.isAutocomplete()) return k.tamamla ? await k.tamamla(i, ctx) : i.respond([]);
-        if (!i.inGuild()) return hata(i, 'Bu bot yalnızca sunucularda çalışır.');
-        return await k.calistir(i, ctx);
-      }
-      if (i.isMessageComponent() || i.isModalSubmit()) {
-        const [onek, ...arg] = i.customId.split(':');
-        const fn = y.bilesenler.get(onek);
-        if (fn) await fn(i, arg, ctx);
-      }
-    } catch (e) {
-      console.error('Etkileşim hatası:', i.commandName || i.customId, e);
-      const mesaj = e?.code === 50013 ? 'Bunu yapmak için yetkim yok. Rolümün yeterince yukarıda ve gerekli izinlere sahip olduğundan emin ol.' : 'Beklenmeyen bir hata oluştu.';
-      if (i.isRepliable()) await hata(i, mesaj).catch(() => {});
-    }
-  });
+  client.on(Events.InteractionCreate, (i) => etkilesimIsle(i, ctx));
 
   client.once(Events.ClientReady, async () => {
     console.log(`✅ ${client.user.tag} olarak giriş yapıldı — ${client.guilds.cache.size} sunucu`);
     const veri = [...y.komutlar.values()].map((k) => k.data.toJSON());
-    try {
-      if (config.guildId) await client.application.commands.set(veri, config.guildId);
-      else await client.application.commands.set(veri);
-      console.log(`✅ ${veri.length} slash komutu kaydedildi (${config.guildId ? 'sunucuya özel' : 'global'})`);
-    } catch (e) { console.error('Komut kaydı başarısız:', e); }
+    await komutlariKaydet(client, veri);
+    client.on(Events.GuildCreate, (g) => { console.log(`➕ Yeni sunucuya eklendim: ${g.name}`); sunucuyaKaydet(g, veri); });
     for (const m of y.moduller) {
       try { await m.hazir?.(ctx); } catch (e) { console.error(`[${m.ad}] hazir hatası:`, e); }
     }
@@ -107,4 +141,4 @@ function baslat() {
 }
 
 if (require.main === module) baslat();
-module.exports = { modulleriYukle };
+module.exports = { modulleriYukle, komutlariKaydet, etkilesimIsle };

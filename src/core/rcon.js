@@ -40,7 +40,14 @@ async function oyuncular(ayar) {
   const liste = c.includes(':') ? c.slice(c.indexOf(':') + 1) : '';
   return liste.split(',').map((x) => x.replace(/§./g, '').replace(/^.*\]\s*/, '').trim()).filter(Boolean);
 }
+// list çıktısından sayı ve kapasite: "There are 3 of a max of 20 players online: ..." (Paper bazen "3 out of maximum 20" yazar)
+async function liste(ayar) {
+  const c = await calistir('list', ayar);
+  const sayilar = (c.replace(/§./g, '').split(':')[0].match(/\d+/g) || []).map(Number);
+  return { oyuncu: sayilar[0] ?? 0, max: sayilar[1] ?? 0, liste: await oyuncularMetinden(c) };
+}
+const oyuncularMetinden = (c) => (c.includes(':') ? c.slice(c.indexOf(':') + 1) : '').split(',').map((x) => x.replace(/§./g, '').replace(/^.*\]\s*/, '').trim()).filter(Boolean);
 const cevrimici = async (nick, ayar) => (await oyuncular(ayar)).some((o) => o.toLowerCase() === String(nick).toLowerCase());
 // Oyuncuya (ya da @a'ya) renkli mesaj: metin JSON olarak kaçışlanır, komuta enjeksiyon yapılamaz
 const tellraw = (hedef, parcalar, ayar) => calistir(`tellraw ${hedef} ${JSON.stringify(parcalar)}`, ayar);
-module.exports = { calistir, hazir, nickGecerli, oyuncular, cevrimici, tellraw };
+module.exports = { calistir, hazir, nickGecerli, oyuncular, cevrimici, tellraw, liste };
