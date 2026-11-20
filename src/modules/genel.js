@@ -10,17 +10,19 @@ const KATEGORILER = {
   '🪙 Ekonomi': ['bakiye', 'günlük', 'çalış', 'gönder', 'market', 'kumar', 'ödül'],
   '🎲 Eğlence': ['düello', 'tkm', 'aim', 'trivia'],
   '🎵 Müzik & Ses': ['müzik', 'oda'],
-  '👥 Topluluk': ['klan', 'anket', 'öneri', 'hatırlat', 'zaman-kapsülü', 'afk', 'doğumgünü', 'davetler'],
-  '🛡️ Moderasyon': ['ban', 'kick', 'sustur', 'susturma-kaldır', 'uyar', 'uyarılar', 'uyarı-sil', 'sil', 'jail', 'unjail', 'yavaşmod', 'kilit', 'otomod'],
+  '👥 Topluluk': ['şikayet', 'klan', 'anket', 'öneri', 'hatırlat', 'zaman-kapsülü', 'afk', 'doğumgünü', 'davetler'],
+  '🛡️ Moderasyon': ['ban', 'kick', 'sustur', 'susturma-kaldır', 'uyar', 'uyarılar', 'uyarı-sil', 'sil', 'jail', 'unjail', 'yavaşmod', 'kilit', 'yasak-kaldır', 'sicil', 'not', 'otomod'],
+  '👮 Yetkili Ekibi': ['yetkili', 'mesai', 'yetkili-ayar'],
+  '💎 VIP': ['vip'],
   '🎮 Oyun Yönetimi': ['oyun', 'mc', 'hesap-ayar'],
   '⚙️ Yönetim': ['teşhis', 'kurulum', 'ayar', 'duyuru', 'çekiliş', 'ticket-panel', 'kurallar-panel', 'rol-panel', 'seviye-rol', 'karne', 'nabız'],
   'ℹ️ Bilgi': ['yardım', 'ping', 'avatar', 'sunucu-bilgi', 'kullanıcı'],
 };
 const KANAL_AYAR = {
-  log: 'Moderasyon kayıtları', hosgeldin: 'Hoş geldin / güle güle', duyuru: 'Duyurular', durum: 'Sunucu açıldı/kapandı bildirimleri', basvuru: 'Başvurular (yetkili)', hesap: 'Hesap bağlama paneli',
+  log: 'Moderasyon kayıtları', hosgeldin: 'Hoş geldin / güle güle', duyuru: 'Duyurular', durum: 'Sunucu açıldı/kapandı bildirimleri', basvuru: 'Başvurular (yetkili)', hesap: 'Hesap bağlama paneli', sikayet: 'Şikayetler (yetkili)', yetkiliDuyuru: 'Yetkili duyuruları / rütbe değişimleri', yetkiliBasvuru: 'Yetkili başvuruları (yetkili)', kadro: 'Yetkili kadrosu panosu', sohbet: 'Genel sohbet (takviye teşekkürleri)',
   seviye: 'Seviye ve başarım duyuruları', oneri: 'Öneriler', yildiz: 'Yıldız panosu (⭐)', sayma: 'Sayı sayma oyunu', kelime: 'Kelime zinciri oyunu', dogumgunu: 'Doğum günü kutlamaları',
 };
-const ROL_AYAR = { bagli: 'Hesap bağlı (Minecraft hesabını doğrulayan)', uye: 'Üye (kuralları kabul eden)', oyuncu: 'Oyuncu (başvurusu onaylanan)', destek: 'Destek ekibi (ticket)', jail: 'Cezalı', oto: 'Yeni üyeye otomatik rol' };
+const ROL_AYAR = { bagli: 'Hesap bağlı (Minecraft hesabını doğrulayan)', uye: 'Üye (kuralları kabul eden)', oyuncu: 'Oyuncu (başvurusu onaylanan)', destek: 'Yetkili ekibi (tüm yetkililer; yetkili kanalları ve talepler)', gorevde: 'Görevde (mesaideki yetkililer)', jail: 'Cezalı', oto: 'Yeni üyeye otomatik rol' };
 // Kurulumda markete konan hazır oyun içi ürünler (RCON ile envantere teslim edilir)
 const VARSAYILAN_MARKET = [
   { ad: '💎 5 Elmas', fiyat: 2500, komut: 'give {oyuncu} minecraft:diamond 5' },
@@ -46,11 +48,12 @@ async function kurulum(i) {
     if (mevcut) return mevcut;
     const r = await g.roles.create({ permissions: [], ...veri }); db.ayarYaz(g.id, anahtar, r.id); yapilan.push(`${r}`); return r;
   };
-  const destek = await rolAl('rol.destek', { name: 'Destek Ekibi', color: 0x5ad1ff, hoist: true });
+  const destek = await rolAl('rol.destek', { name: '🛡️ Yetkili Ekibi', color: 0x5ad1ff });
   const oyuncu = await rolAl('rol.oyuncu', { name: 'Oyuncu', color: 0x2ee66b, hoist: true });
   await rolAl('rol.uye', { name: 'Üye', color: 0x8fd9a8 });
   await rolAl('rol.bagli', { name: '🔗 Hesap Bağlı', color: 0x5eead4 });
   const cezali = await rolAl('rol.jail', { name: 'Cezalı', color: 0x555555 });
+  await require('./yetkili').rolleriKur(g, yapilan);
   const seviyeRol = db.ayar(g.id, 'seviyeRolleri', {});
   for (const [lvl, isim, renk] of RUTBELER) {
     if (seviyeRol[lvl] && g.roles.cache.has(seviyeRol[lvl])) continue;
@@ -81,6 +84,9 @@ async function kurulum(i) {
   await metin('kanal.hosgeldin', '👋・hoş-geldin', kBilgi, saltOkunur);
   const kBasvuruPanel = await metin('kanal.basvuruPanel', '📝・başvuru', kBilgi, saltOkunur);
   const kHesap = await metin('kanal.hesap', '🔗・hesap-bağla', kBilgi, saltOkunur);
+  const kKadro = await metin('kanal.kadro', '👮・yetkili-kadrosu', kBilgi, saltOkunur);
+  const kVip = await metin('kanal.vip', '💎・vip-avantajları', kBilgi, saltOkunur);
+  const kYBasvuru = await metin('kanal.yetkiliBasvuruPanel', '📝・yetkili-başvurusu', kBilgi, saltOkunur);
 
   const kTopluluk = await kat('kategori.topluluk', '💬 TOPLULUK');
   await metin('kanal.sohbet', '💬・sohbet', kTopluluk);
@@ -104,6 +110,11 @@ async function kurulum(i) {
   const kYetkili = await kat('kategori.yetkili', '🛡️ YETKİLİ', gizli);
   await metin('kanal.log', '🛡️・mod-log', kYetkili, gizli);
   await metin('kanal.basvuru', '📥・başvurular', kYetkili, gizli);
+  await metin('kanal.yetkiliSohbet', '💬・yetkili-sohbet', kYetkili, gizli);
+  await metin('kanal.yetkiliDuyuru', '📣・yetkili-duyuru', kYetkili, gizli);
+  await metin('kanal.sikayet', '🚨・şikayetler', kYetkili, gizli);
+  await metin('kanal.yetkiliBasvuru', '🗂️・yetkili-başvuruları', kYetkili, gizli);
+  await kanalAl('ses.toplanti', { name: '🎙️ Yetkili Toplantı', type: ChannelType.GuildVoice, parent: kYetkili.id, permissionOverwrites: gizli.map((o) => (o.id === destek.id ? { ...o, allow: [P.ViewChannel, P.Connect, P.Speak] } : o)) });
   const hucreYeni = !g.channels.cache.get(db.ayar(g.id, 'kanal.cezali'));
   await metin('kanal.cezali', '⛓️・cezalı', kYetkili, [{ ...herkes, deny: [P.ViewChannel] }, bot, { id: cezali.id, type: OverwriteType.Role, allow: [P.ViewChannel, P.SendMessages] }]);
   if (hucreYeni) for (const k of g.channels.cache.values()) if (k.type === ChannelType.GuildCategory || !k.parentId) { if (k.id !== db.ayar(g.id, 'kanal.cezali')) await k.permissionOverwrites?.edit(cezali, { ViewChannel: false }).catch(() => {}); }
@@ -114,6 +125,9 @@ async function kurulum(i) {
   if (yeniler.has(kTicket.id)) await dene('Destek paneli', () => require('./ticket').panelGonder(kTicket));
   if (yeniler.has(kBasvuruPanel.id)) await dene('Başvuru paneli', () => mcMod.basvuruPanelGonder(kBasvuruPanel));
   if (yeniler.has(kHesap.id)) await dene('Hesap bağlama paneli', () => require('./hesap').panelGonder(kHesap));
+  if (yeniler.has(kYBasvuru.id)) await dene('Yetkili başvuru paneli', () => require('./yetkili').basvuruPanelGonder(kYBasvuru));
+  if (yeniler.has(kVip.id)) await dene('VIP paneli', async () => { const yt = require('../core/yetki'); await kVip.send({ files: [cizim.vipKart({ sunucu: mcMod.ayar(g.id).ad, paketler: yt.VIPLER.slice().reverse() })], embeds: [E(null, `${yt.VIPLER.slice().reverse().map((v) => `${v.emoji} **${v.ad}** — **${v.carpan}x** XP ve günlük ödül, özel rol ve renk`).join('\n')}\n🚀 **Sunucu takviyecileri** 1.25x XP ve takviye başına 2.500 coin alır.\n\nKendi durumun için \`/vip durum\`.`, R.altin).setImage('attachment://vip.png')] }); });
+  if (yeniler.has(kKadro.id)) await dene('Kadro panosu', () => require('./yetkili').kadroYenile(g, true));
   if (db.ayar(g.id, 'market') === null) db.ayarYaz(g.id, 'market', VARSAYILAN_MARKET.map((u, n) => ({ id: `v${n}`, ...u })));
   const mcAdres = mcMod.ayar(g.id).adres;
   if (mcAdres && !db.belge.liste(g.id, 'mcpanel').length) await dene('Durum paneli', () => mcMod.canliPanelKur(g, kDurum));
@@ -121,7 +135,7 @@ async function kurulum(i) {
 
   const kart = await cizim.bannerKart({ ust: 'KURULUM TAMAMLANDI', baslik: mcMod.ayar(g.id).ad || g.name, alt: yapilan.length ? `${yapilan.length} rol ve kanal oluşturuldu` : 'Her şey zaten kuruluydu', logo: true, dosya: 'kurulum' });
   await i.editReply({ files: [kart], embeds: [E(null, (yapilan.length ? `**Oluşturulanlar**\n${yapilan.join(' ').slice(0, 1800)}\n\n` : '') +
-    `**Sıradaki adımlar**\n✅ \`${mcAdres}\` için canlı durum paneli kuruldu\n${require('../core/rcon').hazir() ? '✅ Konsol bağlantısı (RCON) çalışıyor: hesap doğrulama, ödüller ve oyun içi yönetim açık' : '➡️ `.env` dosyasına RCON bilgilerini gir: hesap doğrulama, oyun içi ödüller ve market teslimatı bununla çalışır'}\n➡️ <@&${destek.id}> rolünü yetkililerine ver\n➡️ \`/mc oy-ekle\` ile oy sitelerini, \`/hesap-ayar göster\` ile hesap bağlama ödüllerini kontrol et\n➡️ \`/otomod durum\` ile korumaları gözden geçir` +
+    `**Sıradaki adımlar**\n✅ \`${mcAdres}\` için canlı durum paneli kuruldu\n${require('../core/rcon').hazir() ? '✅ Konsol bağlantısı (RCON) çalışıyor: hesap doğrulama, ödüller ve oyun içi yönetim açık' : '➡️ `.env` dosyasına RCON bilgilerini gir: hesap doğrulama, oyun içi ödüller ve market teslimatı bununla çalışır'}\n➡️ Yetkililerine \`/yetkili ver\` ile rütbe ver (🌱 Deneme Rehber → 👑 Kurucu)\n➡️ \`/mc oy-ekle\` ile oy sitelerini, \`/hesap-ayar göster\` ile hesap bağlama ödüllerini kontrol et\n➡️ \`/otomod durum\` ile korumaları gözden geçir` +
     (uyarilar.length ? `\n\n**⚠️ Dikkat**\n${uyarilar.map((u) => `• ${u}`).join('\n')}` : ''), uyarilar.length ? R.altin : R.ok).setImage('attachment://kurulum.png')] });
 }
 
@@ -131,6 +145,7 @@ function yardimEmbed(ctx, kategori) {
   const satirlar = [];
   for (const ad of KATEGORILER[kategori] || []) {
     const k = ctx.komutlar.get(ad);
+    if (k?.menu) continue;
     if (!k) continue;
     const j = k.data.toJSON(), altlar = (j.options || []).filter((o) => o.type === 1 || o.type === 2);
     if (altlar.length) for (const a of altlar) satirlar.push(`\`/${ad} ${a.name}\` — ${a.description}`);

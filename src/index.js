@@ -59,7 +59,7 @@ async function komutlariKaydet(client, veri) {
 
 async function etkilesimIsle(i, ctx) {
   try {
-    if (i.isChatInputCommand() || i.isAutocomplete()) {
+    if (i.isChatInputCommand() || i.isAutocomplete() || i.isContextMenuCommand?.()) {
       const k = ctx.komutlar.get(i.commandName);
       if (!k) {
         // Eski bir sürümden kalmış, artık olmayan komut: sessiz kalırsa Discord "uygulama yanıt vermedi" gösterir

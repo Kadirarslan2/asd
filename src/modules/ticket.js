@@ -54,6 +54,7 @@ module.exports = {
       await log(g, E(`🎫 Talep #${t.no} kapatıldı`, `**Konu:** ${KONULAR[t.konu]?.[1] || '—'}\n**Açan:** <@${t.ref}>\n**Kapatan:** ${i.user}\n**Mesaj:** ${mesajlar.length}`, R.gri),
         [new AttachmentBuilder(Buffer.from(dokum || '(boş)', 'utf8'), { name: `talep-${t.no}.txt` })]);
       db.belge.sil(t.id);
+      if (t.ref !== i.user.id) db.belge.ekle(g.id, 'islem', { is: 'ticket', no: t.no }, i.user.id); // yetkili istatistiği
       setTimeout(() => i.channel.delete().catch(() => {}), 4000);
     },
   },

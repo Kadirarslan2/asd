@@ -67,10 +67,10 @@ module.exports = {
           return hata(i, `Bugünkü ödülünü aldın. Yenilenmesine **${sureYaz(yarin - Date.now())}** var.`);
         }
         const seri = u.veri.gunluk?.gun === dun ? u.veri.gunluk.seri + 1 : 1;
-        const miktar = 200 + Math.min(seri - 1, 14) * 25;
+        const carpan = require('../core/yetki').carpan(i.guild.id, i.user.id), miktar = Math.round((200 + Math.min(seri - 1, 14) * 25) * carpan);
         db.veri(i.guild.id, i.user.id, (v) => { v.gunluk = { gun: bugun, seri }; });
         db.arttir(i.guild.id, i.user.id, 'para', miktar);
-        await yanit(i, E(null, `📅 Günlük ödül: ${para(miktar)}\n🔥 Seri: **${seri} gün**${seri < 15 ? ` (yarın ${sayi(miktar + 25)} 🪙)` : ' (maksimum bonus!)'}`, R.altin));
+        await yanit(i, E(null, `📅 Günlük ödül: ${para(miktar)}${carpan > 1 ? ` (💎 ${carpan}x)` : ''}\n🔥 Seri: **${seri} gün**${seri < 15 ? ` (yarın ${sayi(miktar + 25)} 🪙)` : ' (maksimum bonus!)'}`, R.altin));
         await oyuncu.gorevIlerle(i.guild, i.user.id, 'gunluk', 1, i.channel);
         if (seri >= 7) await oyuncu.basarimVer(i.guild, i.user.id, 'seri7', i.channel);
       } },

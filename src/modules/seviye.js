@@ -20,7 +20,9 @@ async function profilMesaj(guild, user) {
   const kart = await cizim.profilKart({ ad: member?.displayName || user.username, avatar: avatarUrl(member || user), renk: member?.displayHexColor && member.displayHexColor !== '#000000' ? member.displayHexColor : null,
     seviye: s.seviye, sira: db.sira(guild.id, user.id, 'xp'), kalan: s.kalan, gereken: s.gereken, para: u.para, mesaj: u.mesaj, ses: u.ses, rep: u.rep,
     seri: u.veri.gunluk?.gun === gun() || u.veri.gunluk?.gun === gun(Date.now() - 864e5) ? u.veri.gunluk.seri : 0,
-    basarim: (u.veri.basarim || []).length, basarimToplam: Object.keys(oyuncu.BASARIMLAR).length, klan: klan?.etiket, boost: u.veri.boost > Date.now(), mc: u.mc_nick, rutbe: rutbe(s.seviye) });
+    basarim: (u.veri.basarim || []).length, basarimToplam: Object.keys(oyuncu.BASARIMLAR).length, klan: klan?.etiket, boost: u.veri.boost > Date.now(), mc: u.mc_nick, rutbe: rutbe(s.seviye),
+    yetkili: (() => { const r = member && require('../core/yetki').rutbe(member); return r ? { ad: r.ad, renk: `#${r.renk.toString(16).padStart(6, '0')}` } : null; })(),
+    vip: (() => { const v = require('../core/yetki').vipBilgi(guild.id, user.id); return v ? { ad: v.ad, renk: `#${v.renk.toString(16).padStart(6, '0')}` } : null; })() });
   const b = (id, ad, emoji) => new ButtonBuilder().setCustomId(`profil:${id}:${user.id}`).setLabel(ad).setEmoji(emoji).setStyle(ButtonStyle.Secondary);
   return { files: [kart], components: [satir(b('gorev', 'Görevler', '📜'), b('basarim', 'Başarımlar', '🏅'), b('yenile', 'Yenile', '🔄'))] };
 }

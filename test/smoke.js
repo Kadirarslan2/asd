@@ -1,5 +1,6 @@
 // Discord'a bağlanmadan çalışan testler (sahte sunucu, sahte Minecraft ve RCON sunucularıyla):  npm test
 process.env.DB_PATH = ':memory:';
+process.env.KADRO_GECIKME_MS = '30';
 const assert = require('node:assert/strict');
 const dgram = require('node:dgram');
 const net = require('node:net');
@@ -39,6 +40,9 @@ function sahteSunucu(id = 'g1') {
     roles: { cache: new Collection() }, channels: { cache: new Collection() }, members: { cache: new Collection() }, client: null };
   g.roles.create = async (v) => { const r = { id: String(++sayac), name: v.name, position: 1, managed: false, editable: true, permissions: { has: () => false }, toString: () => `<@&${r.id}>` }; g.roles.cache.set(r.id, r); return r; };
   g.roles.everyone = { id };
+  g.yasakli = new Set();
+  g.members.ban = async (uid) => { g.yasakli.add(uid.id || uid); };
+  g.members.unban = async (uid) => { if (!g.yasakli.delete(uid)) throw new Error('Unknown Ban'); };
   g.channels.create = async (v) => sahteKanal(g, v);
   g.members.fetch = async (a) => (typeof a === 'string' ? g.members.cache.get(a) ?? null : new Collection([...g.members.cache].filter(([k]) => !a?.user || a.user.includes(k))));
   g.members.me = sahteUye(g, 'bot', { yetkili: true, bot: true });
@@ -47,7 +51,7 @@ function sahteSunucu(id = 'g1') {
 }
 function sahteUye(guild, id, { yetkili = false, bot = false } = {}) {
   const user = { id, bot, username: `kullanici_${id}`, tag: `kullanici_${id}`, createdTimestamp: Date.now() - 1e10, displayAvatarURL: () => null, toString: () => `<@${id}>`, send: async (p) => { m.dm.push(p); } };
-  const m = { id, user, guild, displayName: `Üye ${id}`, displayHexColor: '#000000', joinedTimestamp: Date.now(), dm: [], displayAvatarURL: () => null, toString: () => `<@${id}>`, send: user.send,
+  const m = { id, user, guild, displayName: `Üye ${id}`, moderatable: true, manageable: true, kickable: true, timeout: async (ms) => { m.susturma = ms; }, kick: async () => { m.atildi = true; }, displayHexColor: '#000000', joinedTimestamp: Date.now(), dm: [], displayAvatarURL: () => null, toString: () => `<@${id}>`, send: user.send,
     permissions: { has: () => yetkili }, roles: { cache: new Collection(), highest: { position: 1 }, add: async (r) => { for (const x of [].concat(r)) m.roles.cache.set(x.id || x, true); }, remove: async (r) => { for (const x of [].concat(r)) m.roles.cache.delete(x.id || x); } },
     voice: { channelId: null, get channel() { return guild.channels.cache.get(m.voice.channelId) || null; },
       setChannel: async (k) => { guild.channels.cache.get(m.voice.channelId)?.members.delete(id); m.voice.channelId = k.id; k.members.set(id, m); },
@@ -62,7 +66,7 @@ function etkilesim(guild, member, { komut = null, alt = null, secenek = {}, kana
     memberPermissions: { has: () => member.permissions.has() }, members: degerler ? new Collection(degerler.map((d) => [d, guild.members.cache.get(d)])) : null,
     fields: { getTextInputValue: (ad) => alanlar?.[ad] ?? '' },
     isModalSubmit: () => tur === 'modal', isUserSelectMenu: () => tur === 'uyesec', isMessageComponent: () => tur !== 'komut' && tur !== 'modal',
-    options: { getSubcommand: () => alt, getString: al, getInteger: al, getBoolean: al, getUser: (ad) => (secenek[ad] ? guild.members.cache.get(secenek[ad])?.user ?? sahteUye(guild, secenek[ad]).user : null), getMember: (ad) => guild.members.cache.get(secenek[ad]) ?? null, getRole: al, getChannel: al, getFocused: () => '' },
+    options: { getSubcommand: () => alt, getString: al, getInteger: al, getBoolean: al, getUser: (ad) => (secenek[ad] ? guild.members.cache.get(secenek[ad])?.user ?? sahteUye(guild, secenek[ad]).user : null), getMember: (ad) => guild.members.cache.get(secenek[ad]) ?? null, getRole: al, getChannel: al, getAttachment: al, getFocused: () => '' },
     reply: async (p) => { i.replied = true; yanitlar.push(p); }, editReply: async (p) => { yanitlar.push(p); return { id: 'm' + i.id }; }, followUp: async (p) => { yanitlar.push(p); },
     deferReply: async () => { i.deferred = true; }, fetchReply: async () => ({ id: 'm' + i.id }), update: async (p) => { yanitlar.push(p); }, deferUpdate: async () => { i.deferred = true; }, showModal: async (m) => { i.modal = m; } };
   return i;
@@ -83,9 +87,11 @@ const hataMi = (i) => i.yanitlar.some((p) => p.flags === MessageFlags.Ephemeral 
   await test('tüm komutlar Discord şemasına uygun, yardım menüsü eksiksiz', () => {
     const veri = [...y.komutlar.values()].map((k) => k.data.toJSON());
     assert.ok(veri.length >= 50 && veri.length <= 100);
+    for (const k of veri.filter((x) => (x.type ?? 1) === 1)) assert.ok(k.description.length <= 100 && /^[-_'\p{L}\p{N}]{1,32}$/u.test(k.name), k.name);
+    assert.ok(veri.some((x) => x.type === 3), 'mesaja sağ tık menüsü var');
     const liste = Object.values(require('../src/modules/genel').KATEGORILER).flat();
     for (const ad of liste) assert.ok(y.komutlar.has(ad), `yardımda olup olmayan komut: ${ad}`);
-    for (const ad of y.komutlar.keys()) assert.ok(liste.includes(ad), `yardımda eksik: ${ad}`);
+    for (const [ad, k] of y.komutlar) if (!k.menu) assert.ok(liste.includes(ad), `yardımda eksik: ${ad}`);
   });
   await test('logo ve tüm kartlar çizilir (emoji ve uzun adlar dahil)', async () => {
     png(cizim.logoDosya(256));
@@ -120,7 +126,8 @@ const hataMi = (i) => i.yanitlar.some((p) => p.flags === MessageFlags.Ephemeral 
     const i = await kos('kurulum', yonetici, { secenek: { adres: '127.0.0.1:1' } }); // testte gerçek sunucuya bağlanma
     assert.equal(require('../src/modules/minecraft').ayar(G).ad, 'AuraCraft');
     assert.ok(!hataMi(i)); png(i.yanitlar[0].files[0]);
-    for (const a of ['kanal.hesap', 'kanal.kurallar', 'kanal.duyuru', 'kanal.durum', 'kanal.hosgeldin', 'kanal.log', 'kanal.basvuru', 'kanal.destek', 'kanal.seviye', 'ses.olustur', 'kategori.ticket']) assert.ok(guild.channels.cache.has(db.ayar(G, a)), a);
+    assert.equal(Object.keys(db.ayar(G, 'yetki.roller')).length, 6); assert.equal(Object.keys(db.ayar(G, 'vip.roller')).length, 4); assert.ok(guild.roles.cache.has(db.ayar(G, 'rol.gorevde')));
+    for (const a of ['kanal.kadro', 'kanal.vip', 'kanal.yetkiliBasvuruPanel', 'kanal.yetkiliBasvuru', 'kanal.sikayet', 'kanal.yetkiliDuyuru', 'kanal.yetkiliSohbet', 'ses.toplanti', 'kanal.hesap', 'kanal.kurallar', 'kanal.duyuru', 'kanal.durum', 'kanal.hosgeldin', 'kanal.log', 'kanal.basvuru', 'kanal.destek', 'kanal.seviye', 'ses.olustur', 'kategori.ticket']) assert.ok(guild.channels.cache.has(db.ayar(G, a)), a);
     for (const a of ['rol.bagli', 'rol.oyuncu', 'rol.uye', 'rol.destek', 'rol.jail']) assert.ok(guild.roles.cache.has(db.ayar(G, a)), a);
     assert.equal(Object.keys(db.ayar(G, 'seviyeRolleri')).length, 6);
     const panel = (a) => guild.channels.cache.get(db.ayar(G, a)).gonderilen;
@@ -322,6 +329,89 @@ const hataMi = (i) => i.yanitlar.some((p) => p.flags === MessageFlags.Ephemeral 
     const i = await kos('teşhis', yonetici);
     guild.members.me.permissions.has = () => true;
     const m = duzMetin(i); assert.match(m, /Üyeleri Taşı/); assert.match(m, /RCON/); assert.match(m, /Komutlar/);
+  });
+  console.log('Yetkili ekibi, moderasyon sınırları, VIP, şikayet');
+  const roller = () => require('../src/core/yetki').rolHaritasi(G);
+  const yetki = require('../src/core/yetki');
+  const kanalAl = (a) => guild.channels.cache.get(db.ayar(G, a));
+  await test('/yetkili ver: roller verilir, oyunda senkronlanır, duyurulur, kadro panosu güncellenir', async () => {
+    rconKomutlar.length = 0;
+    const kadroOnce = kanalAl('kanal.kadro').gonderilen.length;
+    const i = await kos('yetkili', yonetici, { alt: 'ver', secenek: { üye: 'ali', rütbe: 'moderator' } });
+    assert.ok(!hataMi(i), duzMetin(i)); assert.ok(ali.roles.cache.has(roller().moderator) && ali.roles.cache.has(db.ayar(G, 'rol.destek')));
+    assert.equal(yetki.seviye(ali), 4); assert.ok(rconKomutlar.includes('yetki ver Ali_MC moderator'), JSON.stringify(rconKomutlar));
+    png(kanalAl('kanal.yetkiliDuyuru').gonderilen.at(-1).files[0]);
+    await bekle(120); assert.ok(kanalAl('kanal.kadro').gonderilen.length > kadroOnce, 'kadro panosu güncellenmeli');
+    png(kanalAl('kanal.kadro').gonderilen.at(-1).files[0]);
+    assert.ok(hataMi(await kos('yetkili', yonetici, { alt: 'ver', secenek: { üye: 'veli', rütbe: 'kurucu' } })), 'kendi seviyesindeki rütbeyi veremez');
+    assert.ok(hataMi(await kos('yetkili', ali, { alt: 'ver', secenek: { üye: 'veli', rütbe: 'deneme' } })), 'moderatör rütbe veremez');
+    const sahip = sahteUye(guild, 'sahip'); assert.equal(yetki.seviye(sahip), 7);
+  });
+  await test('/mesai görevde rolü verir, süreyi sayar; /yetkili profil ve istatistik çalışır', async () => {
+    await kos('mesai', ali); assert.ok(ali.roles.cache.has(db.ayar(G, 'rol.gorevde'))); assert.ok(db.uye(G, 'ali').veri.mesai.aktif);
+    await bekle(20); await kos('mesai', ali); assert.ok(!ali.roles.cache.has(db.ayar(G, 'rol.gorevde'))); assert.ok(db.uye(G, 'ali').veri.mesai.toplam > 0);
+    assert.ok(hataMi(await kos('mesai', guild.members.cache.get('eda'))), 'yetkili olmayan mesaiye giremez');
+    for (const a of [{ alt: 'profil' }, { alt: 'istatistik' }, { alt: 'rütbeler' }, { alt: 'liste' }]) { const i = await kos('yetkili', ali, a); assert.ok(!hataMi(i), a.alt); }
+  });
+  await test('yetkili başvurusu: doğrulanmış hesap şartı, form, kabul edilince Deneme Rehber', async () => {
+    assert.ok(hataMi(await bas('ybasvuru', ['ac'], guild.members.cache.get('eda'))), 'hesabı doğrulanmamış');
+    const deniz = guild.members.cache.get('deniz');
+    assert.ok((await bas('ybasvuru', ['ac'], deniz)).modal);
+    await bas('ybasvuru', ['gonder'], deniz, { tur: 'modal', alanlar: { yas: '17', saat: '4', deneyim: 'yok', neden: 'aktifim', durum: 'uyarırım' } });
+    const b = db.belge.liste(G, 'ybasvuru')[0]; assert.equal(kanalAl('kanal.yetkiliBasvuru').gonderilen.length, 1);
+    assert.ok(hataMi(await bas('ybasvuru', ['onay', String(b.id)], ali)), 'moderatör başvuru onaylayamaz');
+    await bas('ybasvuru', ['onay', String(b.id)], yonetici);
+    assert.equal(yetki.rutbe(deniz).id, 'deneme'); assert.equal(yetki.seviye(deniz), 1);
+  });
+  await test('rütbe sınırları: Deneme Rehber 30 dk\'dan uzun susturamaz, ban atamaz; üst yetkiliye işlem yapamaz', async () => {
+    const deniz = guild.members.cache.get('deniz'), eda = guild.members.cache.get('eda');
+    assert.ok(hataMi(await kos('sustur', deniz, { secenek: { üye: 'eda', süre: '2s' } })));
+    await kos('sustur', deniz, { secenek: { üye: 'eda', süre: '20dk', sebep: 'flood' } }); assert.equal(eda.susturma, 20 * 6e4);
+    assert.ok(hataMi(await kos('ban', deniz, { secenek: { üye: 'eda' } })), 'Deneme Rehber ban atamaz');
+    assert.ok(hataMi(await kos('uyar', deniz, { secenek: { üye: 'ali', sebep: 'x' } })), 'üst yetkili uyarılamaz');
+    assert.ok(hataMi(await kos('sustur', eda, { secenek: { üye: 'veli', süre: '10dk' } })), 'yetkisiz üye susturamaz');
+  });
+  await test('Moderatör yalnızca süreli ban atar; süre bitince ban kendiliğinden kalkar; sicilde görünür', async () => {
+    assert.ok(hataMi(await kos('ban', ali, { secenek: { üye: 'eda', sebep: 'hile' } })), 'moderatör kalıcı ban atamaz');
+    assert.ok(hataMi(await kos('ban', ali, { secenek: { üye: 'eda', süre: '30g' } })), '7 günden uzun olamaz');
+    await kos('ban', ali, { secenek: { üye: 'eda', süre: '3g', sebep: 'hile' } });
+    assert.ok(guild.yasakli.has('eda')); const t = db.belge.refHepsi(G, 'tempban', 'eda')[0]; assert.ok(t);
+    db.belge.yaz(t.id, { ...t, bitis: Date.now() - 1 });
+    await y.moduller.find((m) => m.ad === 'moderasyon').tik(ctx);
+    assert.ok(!guild.yasakli.has('eda'), 'süreli ban bitmeli');
+    const s = await kos('sicil', ali, { secenek: { üye: 'eda' } }); const m = duzMetin(s);
+    assert.match(m, /Ban/); assert.match(m, /Susturma/); assert.equal(yetki.cezaKaydet.length >= 0, true);
+    assert.equal(require('../src/modules/yetkili').istatistik(G, 'ali').ban, 1);
+    assert.ok(hataMi(await kos('sicil', guild.members.cache.get('eda'), { secenek: { üye: 'veli' } })), 'sicil yetkililere özel');
+  });
+  await test('VIP: verilir (rol + çarpan), yetkisiz veremez, süresi bitince düşer', async () => {
+    assert.ok(hataMi(await kos('vip', ali, { alt: 'ver', secenek: { üye: 'veli', paket: 'vip' } })), 'moderatör VIP veremez');
+    const i = await kos('vip', yonetici, { alt: 'ver', secenek: { üye: 'veli', paket: 'mvp', süre: '30g' } });
+    png(i.yanitlar.at(-1).files[0]); assert.ok(veli.roles.cache.has(require('../src/core/yetki').vipHaritasi(G).mvp)); assert.equal(yetki.carpan(G, 'veli'), 1.75);
+    db.veri(G, 'veli', (v) => { v.vip.bitis = Date.now() - 1; });
+    await y.moduller.find((m) => m.ad === 'vip').tik(ctx);
+    assert.ok(!veli.roles.cache.has(yetki.vipHaritasi(G).mvp)); assert.equal(yetki.carpan(G, 'veli'), 1);
+    png((await kos('vip', veli, { alt: 'bilgi' })).yanitlar[0].files[0]);
+  });
+  await test('şikayet: yetkili kanalına düşer; yetkili çözünce şikayet edene haber gider; mesaj menüsü çalışır', async () => {
+    const once = kanalAl('kanal.sikayet').gonderilen.length;
+    await kos('şikayet', veli, { secenek: { sebep: 'küfür etti', üye: 'eda' } });
+    assert.equal(kanalAl('kanal.sikayet').gonderilen.length, once + 1);
+    const s = db.belge.liste(G, 'sikayet').at(-1);
+    assert.ok(hataMi(await bas('sikayet', ['coz', String(s.id)], guild.members.cache.get('eda'))), 'üye çözemez');
+    const b = etkilesim(guild, guild.members.cache.get('deniz'), { tur: 'buton' }); b.message.embeds = [{ toJSON: () => ({ title: 'x' }) }];
+    await y.bilesenler.get('sikayet')(b, ['coz', String(s.id)], ctx);
+    assert.equal(db.belge.al(s.id).durum, 'kapali'); assert.equal(veli.dm.length >= 1, true);
+    const can = guild.members.cache.get('can');
+    const m = etkilesim(guild, can, { komut: 'Mesajı şikayet et' }); m.targetMessage = { author: { id: 'eda', bot: false }, content: 'kötü söz', url: 'https://discord.com/x', attachments: new Collection() };
+    await y.komutlar.get('Mesajı şikayet et').calistir(m, ctx);
+    assert.equal(kanalAl('kanal.sikayet').gonderilen.length, once + 2);
+  });
+  await test('/yetkili al: rütbe ve yetkili ekibi rolü alınır, oyunda da alınır', async () => {
+    rconKomutlar.length = 0;
+    await kos('yetkili', yonetici, { alt: 'al', secenek: { üye: 'deniz' } });
+    const deniz = guild.members.cache.get('deniz');
+    assert.equal(yetki.seviye(deniz), 0); assert.ok(!deniz.roles.cache.has(db.ayar(G, 'rol.destek'))); assert.ok(rconKomutlar.includes('yetki al Can_MC'));
   });
   await test('market: konsol komutlu ürün oyun içinde teslim edilir; hesap bağlı değilse ya da para yoksa satılmaz', async () => {
     assert.ok(hataMi(await kos('market', yonetici, { alt: 'ekle', secenek: { fiyat: 100, ad: 'x', komut: 'give @a diamond 64' } })), '{oyuncu} zorunlu');

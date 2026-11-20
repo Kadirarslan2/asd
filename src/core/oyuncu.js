@@ -75,6 +75,7 @@ const oyuncu = {
   async xpEkle(guild, userId, miktar, kanal = null) {
     const u = db.uye(guild.id, userId);
     if (u.veri.boost > Date.now()) miktar *= 2;
+    miktar *= require('./yetki').carpan(guild.id, userId); // VIP ve sunucu takviyesi
     const yeniXp = u.xp + Math.round(miktar);
     const { seviye } = seviyeHesapla(yeniXp);
     db.uyeYaz(guild.id, userId, { xp: yeniXp, seviye });

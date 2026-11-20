@@ -1,6 +1,6 @@
 // Oyun içi yönetim (RCON): çevrimiçi oyuncular, at, ban, ban kaldır, whitelist, oyuna duyuru.
 // Vanilla komutlar kullanılır; AuraCraft eklentisi dahil her Paper/Spigot sunucusunda çalışır.
-const { SlashCommandBuilder, PermissionFlagsBits: P } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const db = require('../core/db');
 const rcon = require('../core/rcon');
 const cizim = require('../core/cizim');
@@ -32,7 +32,7 @@ module.exports = {
         const bagli = new Map(db.bagliHesaplar(i.guild.id).map((u) => [u.mc_nick.toLowerCase(), u.user]));
         return i.editReply({ embeds: [E(`🎮 Oyunda ${l.length} oyuncu`, l.length ? l.map((n) => `• \`${n}\`${bagli.has(n.toLowerCase()) ? ` — <@${bagli.get(n.toLowerCase())}>` : ''}`).join('\n').slice(0, 4000) : 'Şu an kimse oyunda değil.', R.ana).setThumbnail(l[0] ? cizim.kafaUrl(l[0]) : null)] });
       } },
-    { data: new SlashCommandBuilder().setName('oyun').setDescription('[Yetkili] Oyun içi yönetim').setDefaultMemberPermissions(P.ModerateMembers)
+    { data: new SlashCommandBuilder().setName('oyun').setDescription('[Yetkili] Oyun içi yönetim')
         .addSubcommand((s) => sebepSec(oyuncuSec(s.setName('at').setDescription('Oyuncuyu sunucudan atar'))))
         .addSubcommand((s) => sebepSec(oyuncuSec(s.setName('ban').setDescription('Oyuncuyu oyundan yasaklar'))))
         .addSubcommand((s) => oyuncuSec(s.setName('ban-kaldır').setDescription('Oyun yasağını kaldırır')))
@@ -48,7 +48,9 @@ module.exports = {
         if (!rcon.hazir()) return hata(i, 'Oyun içi yönetim için konsol bağlantısı (RCON) gerekir. Kurulum: README → "RCON\'u açmak".');
         const alt = i.options.getSubcommand(), nick = i.options.getString('oyuncu')?.trim(), sebep = temizSebep(i.options.getString('sebep'));
         if (alt !== 'duyur' && !rcon.nickGecerli(nick)) return hata(i, 'Geçersiz Minecraft adı.');
-        if ((alt === 'ban' || alt === 'ban-kaldır') && !i.memberPermissions.has(P.BanMembers)) return hata(i, 'Oyun yasağı için **Üyeleri Yasakla** yetkisi gerekir.');
+        const islem = { at: 'oyun-at', ban: 'oyun-ban', 'ban-kaldır': 'oyun-ban', 'whitelist-ekle': 'oyun-whitelist', 'whitelist-sil': 'oyun-whitelist', duyur: 'oyun-duyur' }[alt];
+        const yetki = require('../core/yetki'), engel = yetki.gerek(i, islem);
+        if (engel) return hata(i, engel);
         await i.deferReply();
         const komut = { at: `kick ${nick} ${sebep}`, ban: `ban ${nick} ${sebep}`, 'ban-kaldır': `pardon ${nick}`, 'whitelist-ekle': `whitelist add ${nick}`, 'whitelist-sil': `whitelist remove ${nick}` }[alt];
         try {
@@ -58,6 +60,9 @@ module.exports = {
             return i.editReply({ embeds: [E(null, `📢 Oyuna duyuruldu: ${mesaj}`, R.ok)] });
           }
           const cikti = await rcon.calistir(komut);
+          // Sicile işle: hesap bağlıysa Discord üyesine, değilse Minecraft adına
+          const bagli = db.mcBul(i.guild.id, nick), tur = `oyun-${alt === 'ban-kaldır' ? 'pardon' : alt.startsWith('whitelist') ? 'whitelist' : alt}`;
+          yetki.cezaKaydet(i.guild.id, bagli?.user || `mc:${nick.toLowerCase()}`, i.user.id, tur, alt === 'at' || alt === 'ban' ? sebep : null);
           const BASLIK = { at: '👢 Oyundan atıldı', ban: '🔨 Oyundan yasaklandı', 'ban-kaldır': '🔓 Oyun yasağı kaldırıldı', 'whitelist-ekle': '📋 Beyaz listeye eklendi', 'whitelist-sil': '📋 Beyaz listeden çıkarıldı' }[alt];
           await log(i.guild, E(`🎮 ${BASLIK}`, `**Oyuncu:** \`${nick}\`\n**Yetkili:** ${i.user}${alt === 'at' || alt === 'ban' ? `\n**Sebep:** ${sebep}` : ''}\n**Sunucu yanıtı:** ${cikti || '—'}`, alt === 'ban' ? R.hata : R.altin));
           return i.editReply({ embeds: [E(BASLIK, `\`${nick}\`${alt === 'at' || alt === 'ban' ? ` — ${sebep}` : ''}\n> ${cikti || 'Komut çalıştırıldı.'}`, alt === 'ban' ? R.hata : R.ok).setThumbnail(cizim.kafaUrl(nick))] });

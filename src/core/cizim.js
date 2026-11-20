@@ -122,6 +122,8 @@ async function profilKart(p) {
   let hx = 225;
   hx += hap(x, `SEVİYE ${p.seviye}`, hx, 122) + 10;
   hx += hap(x, `#${p.sira}`, hx, 122, { renk: 'rgba(255,255,255,0.14)', yaziRenk: RENK.yazi }) + 10;
+  if (p.yetkili) hx += hap(x, p.yetkili.ad.toLocaleUpperCase('tr'), hx, 122, { renk: p.yetkili.renk, yaziRenk: '#0b1020' }) + 10;
+  if (p.vip) hx += hap(x, p.vip.ad, hx, 122, { renk: p.vip.renk, yaziRenk: '#0b1020' }) + 10;
   if (p.rutbe) hx += hap(x, p.rutbe.ad, hx, 122, { renk: p.rutbe.renk }) + 10;
   if (p.klan) hx += hap(x, `[${p.klan}]`, hx, 122, { renk: RENK.mor }) + 10;
   if (p.boost) hap(x, '2x XP', hx, 122, { renk: RENK.altin });
@@ -263,4 +265,51 @@ async function haftalikKart({ sunucu, tarih, bolumler, ozet }) {
   return bitir(t, 'karne');
 }
 
-module.exports = { RENK, logoCiz, logoDosya, kafaUrl, profilKart, siralamaKart, bannerKart, sunucuKart, odaKart, muzikKart, yardimKart, haftalikKart, sayi, sure };
+// Yetkili kadrosu: rütbe başlıkları altında avatar kartları; görevdekilerde yeşil nokta
+async function kadroKart({ sunucu, gruplar, toplam, gorevde }) {
+  const SUTUN = 4, KW = 222, KH = 76, BOSLUK = 12;
+  const satirSay = gruplar.reduce((a, g) => a + Math.max(1, Math.ceil(g.uyeler.length / SUTUN)), 0);
+  const t = tuval(1000, 150 + gruplar.length * 56 + satirSay * (KH + BOSLUK) + 30), { x } = t;
+  yazi(x, 'YETKİLİ KADROSU', 40, 62, { px: 20, w: 800, renk: RENK.ana });
+  yazi(x, sunucu, 40, 108, { px: 42, w: 800, max: 600 });
+  const w1 = hap(x, `${toplam} YETKİLİ`, 690, 38, { px: 16, renk: 'rgba(255,255,255,0.14)', yaziRenk: RENK.yazi });
+  hap(x, `${gorevde} GÖREVDE`, 700 + w1, 38, { px: 16 });
+  let y = 140;
+  for (const g of gruplar) {
+    const renk = `#${g.renk.toString(16).padStart(6, '0')}`;
+    x.fillStyle = renk; x.fillRect(40, y + 8, 6, 30);
+    yazi(x, g.ad.toLocaleUpperCase('tr'), 58, y + 32, { px: 22, w: 800, renk });
+    yazi(x, `${g.uyeler.length} kişi`, 960, y + 32, { px: 16, renk: RENK.soluk, hiza: 'right' });
+    y += 50;
+    if (!g.uyeler.length) { panel(x, 40, y, 920, KH, 16); yazi(x, 'Bu rütbede henüz kimse yok', 500, y + 46, { px: 17, renk: RENK.soluk, hiza: 'center' }); y += KH + BOSLUK; continue; }
+    for (let k = 0; k < g.uyeler.length; k++) {
+      const u = g.uyeler[k], cx = 40 + (k % SUTUN) * (KW + 10), cy = y + Math.floor(k / SUTUN) * (KH + BOSLUK);
+      panel(x, cx, cy, KW, KH, 16);
+      await avatar(x, u.avatar, cx + 40, cy + KH / 2, 25, u.ad, renk);
+      if (u.gorevde) { x.fillStyle = '#0b1020'; x.beginPath(); x.arc(cx + 58, cy + KH / 2 + 18, 9, 0, 7); x.fill(); x.fillStyle = RENK.yesil; x.beginPath(); x.arc(cx + 58, cy + KH / 2 + 18, 6, 0, 7); x.fill(); }
+      yazi(x, u.ad, cx + 78, cy + 34, { px: 18, w: 800, max: KW - 90 });
+      yazi(x, u.alt || '', cx + 78, cy + 56, { px: 13, renk: u.gorevde ? RENK.yesil : RENK.soluk, max: KW - 90 });
+    }
+    y += Math.ceil(g.uyeler.length / SUTUN) * (KH + BOSLUK);
+  }
+  return bitir(t, 'kadro');
+}
+
+// VIP paketleri tanıtım kartı
+function vipKart({ sunucu, paketler }) {
+  const t = tuval(1000, 330, { vurgu: RENK.altin }), { x } = t;
+  yazi(x, 'VIP AYRICALIKLARI', 40, 62, { px: 20, w: 800, renk: RENK.altin });
+  yazi(x, sunucu, 40, 106, { px: 40, w: 800, max: 700 });
+  paketler.forEach((p, k) => {
+    const a = 40 + k * 232, renk = `#${p.renk.toString(16).padStart(6, '0')}`;
+    panel(x, a, 136, 220, 160, 18);
+    x.fillStyle = renk; x.beginPath(); x.roundRect(a, 136, 220, 8, [18, 18, 0, 0]); x.fill();
+    yazi(x, p.ad, a + 110, 192, { px: 34, w: 800, hiza: 'center', renk });
+    yazi(x, `${p.carpan}x XP`, a + 110, 232, { px: 20, w: 800, hiza: 'center' });
+    yazi(x, `${p.carpan}x günlük ödül`, a + 110, 260, { px: 15, hiza: 'center', renk: RENK.soluk });
+    yazi(x, 'Özel rol ve renk', a + 110, 282, { px: 15, hiza: 'center', renk: RENK.soluk });
+  });
+  return bitir(t, 'vip');
+}
+
+module.exports = { kadroKart, vipKart, RENK, logoCiz, logoDosya, kafaUrl, profilKart, siralamaKart, bannerKart, sunucuKart, odaKart, muzikKart, yardimKart, haftalikKart, sayi, sure };

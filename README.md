@@ -51,14 +51,45 @@ Bot ile Minecraft aynı makinedeyse `MC_RCON_HOST=127.0.0.1` yaz ve RCON portunu
 
 RCON ayarlı değilse hesap "doğrulanmamış" bağlanır ve ödül verilmez.
 
+## Yetkili ekibi
+
+| Rütbe | Neler yapabilir |
+|---|---|
+| 🌱 **Deneme Rehber** | Uyarı, 30 dakikaya kadar susturma, sicil ve not, şikayetlerle ilgilenme, mesai |
+| 🧭 **Rehber** | + 2 saate kadar susturma, atma, toplu mesaj silme, oyundan atma |
+| 💬 **Discord Yetkilisi** | + 1 güne kadar susturma, jail, kanal kilidi/yavaş mod, whitelist |
+| ⚔️ **Moderatör** | + 7 güne kadar susturma, **7 güne kadar süreli ban**, yasak kaldırma, oyun banı, oyuna duyuru |
+| 🛡️ **Yönetici** | + kalıcı ban, 28 güne kadar susturma, rütbe ve VIP verme, yetkili başvurusu onayı |
+| 👑 **Kurucu** | Her şey. Kurucu rütbesini yalnızca sunucu sahibi verebilir |
+
+- `/yetkili ver üye rütbe` — rütbeyi verir; hesabı doğrulanmışsa **oyunda da** AuraCraft eklentisine `yetki ver <oyuncu> <rütbe>` gönderir. Terfiler resimli kartla **📣・yetkili-duyuru** kanalına düşer
+- `/yetkili al`, `/yetkili liste` (resimli kadro), `/yetkili profil` (işlem sayıları, mesai süresi, rütbe geçmişi), `/yetkili istatistik` (haftalık/aylık performans), `/yetkili rütbeler`
+- `/mesai` — göreve başla/bitir; **🟢 Görevde** rolü verilir, süre sayılır
+- **👮・yetkili-kadrosu** kanalında kadro panosu kendiliğinden güncellenir
+- **Yetkili başvurusu:** **📝・yetkili-başvurusu** kanalındaki form; kabul edilince Deneme Rehber olunur
+- `/sicil` (tüm ceza geçmişi ve risk durumu), `/not` (yalnızca yetkililerin gördüğü notlar)
+- Herkes `/şikayet` ile ya da bir mesaja **sağ tık → Uygulamalar → Mesajı şikayet et** ile şikayette bulunabilir; şikayetler **🚨・şikayetler** kanalına düşer
+
+Oyun içi rütbe komutları tahmine dayalıdır (`kurucu`, `admin`, `moderator`, `rehber`, `deneme-rehber`). Eklentideki rütbe adları farklıysa `/yetkili-ayar oyun-komutu` ile düzelt; sunucunun yanıtı mod-log kanalına yazılır.
+
+## VIP
+
+**✨ VIP · ⭐ VIP+ · 💠 MVP · 💎 MVP+** → 1.25x / 1.5x / 1.75x / 2x XP ve günlük ödül, özel renkli rol.
+- `/vip ver üye paket süre` (Yönetici) — süreli ya da `kalıcı`; aynı paket verilirse süre uzar. Bitmesine 3 gün kala hatırlatılır, bitince otomatik düşer
+- `/vip ayarla` — paket verilince/bitince oyunda çalışacak konsol komutu (örn. `lp user {oyuncu} parent add vip`)
+- `/vip bilgi`, `/vip durum`, `/vip liste`
+- **Sunucu takviyecileri (boost)** 1.25x XP ve 30 günde bir 2.500 coin alır; teşekkür kartı paylaşılır
+
 ## `/kurulum` ne kurar?
 
-- **Roller:** 🔗 Hesap Bağlı, Üye, Oyuncu, Destek Ekibi, Cezalı ve seviye rütbeleri (Odun → Taş → Demir → Altın → Elmas → Netherite)
-- **📢 Bilgi:** kurallar (kabul butonlu), duyurular, sunucu-durumu (canlı panel), hoş-geldin, başvuru, hesap-bağla
+- **Yetkili rolleri:** 👑 Kurucu, 🛡️ Yönetici, ⚔️ Moderatör, 💬 Discord Yetkilisi, 🧭 Rehber, 🌱 Deneme Rehber, 🛡️ Yetkili Ekibi, 🟢 Görevde
+- **VIP rolleri:** 💎 MVP+, 💠 MVP, ⭐ VIP+, ✨ VIP
+- **Diğer roller:** 🔗 Hesap Bağlı, Üye, Oyuncu, Cezalı ve seviye rütbeleri (Odun → Taş → Demir → Altın → Elmas → Netherite)
+- **📢 Bilgi:** kurallar (kabul butonlu), duyurular, sunucu-durumu (canlı panel), hoş-geldin, başvuru, hesap-bağla, yetkili-kadrosu, vip-avantajları, yetkili-başvurusu
 - **💬 Topluluk:** sohbet, ekran-görüntüleri, bot-komut, seviye, öneriler, yıldızlar, sayı-sayma, kelime-oyunu
 - **🔊 Ses:** ➕ Oda Oluştur, Genel Sohbet, Müzik
 - **🎫 Destek:** konu seçmeli talep paneli
-- **🛡️ Yetkili:** mod-log, başvurular, cezalı
+- **🛡️ Yetkili:** mod-log, başvurular, yetkili-sohbet, yetkili-duyuru, şikayetler, yetkili-başvuruları, cezalı, 🎙️ Yetkili Toplantı
 - **Market:** oyun içine teslim edilen hazır ürünler (elmas, altın elma, tecrübe şişesi, demir, yemek, roket)
 
 İkinci kez çalıştırırsan yalnızca eksikleri tamamlar.
@@ -86,7 +117,7 @@ RCON ayarlı değilse hesap "doğrulanmamış" bağlanır ve ödül verilmez.
 - `/günlük`, `/çalış`, `/gönder`, `/market` (Discord rolü ya da oyun içi eşya), `/kumar`, klanlar
 
 ### 🛡️ Moderasyon ve topluluk
-- Ban, kick, sustur, uyarı (3/5/7'de otomatik ceza), jail, toplu silme, kilit, yavaş mod
+- Ban (süreli/kalıcı), kick, sustur, uyarı (3/5/7'de otomatik ceza), jail, toplu silme, kilit, yavaş mod, yasak kaldırma; her ceza sicile işlenir
 - Otomod: spam, davet/link, yasaklı kelime, büyük harf, toplu etiket, baskın koruması
 - Destek talepleri (dökümlü), çekiliş, anket, öneri, yıldız panosu, rol paneli, `/duyuru`
 - Müzik (`/müzik çal`, `/müzik radyo`), Minecraft bilgi yarışması, düello, nişan antrenmanı, sayı sayma, kelime zinciri
@@ -105,7 +136,8 @@ Tüm komutlar için `/yardım`.
 | Hesap bağlarken "doğrulanmadı" diyor | RCON ayarlı değil; `.env`'e RCON bilgilerini gir, botu yeniden başlat |
 | "Önce oyuna gir" diyor | Kod oyunda gönderilir; o adla sunucuda çevrimiçi ol |
 | Özel oda açılmıyor | Mod-log kanalına sebep yazılır. Botta **Kanalları Yönet**, **Üyeleri Taşı**, **Rolleri Yönet** olmalı |
-| Rol verilmiyor | Bot rolünü rol listesinde en üste taşı |
+| Rol verilmiyor | Bot rolünü rol listesinde en üste taşı (yetkili ve VIP rollerinin de üstünde olmalı) |
+| Yetkili komutu "rütbe gerekir" diyor | `/yetkili ver` ile rütbe ver. Moderasyon artık Discord izinlerine değil yetkili rütbesine bakar |
 
 ## Geliştirme
 ```
