@@ -34,4 +34,13 @@ function calistir(komut, ayar = config.rcon) {
 }
 // Oyuncu adını komuta güvenle gömmek için: yalnızca geçerli Minecraft adları (Bedrock için baştaki nokta dahil)
 const nickGecerli = (n) => /^\.?[A-Za-z0-9_]{3,16}$/.test(String(n));
-module.exports = { calistir, hazir, nickGecerli };
+// "There are 2 of a max of 20 players online: Ali, Veli" → ['Ali', 'Veli'] (Paper/Spigot/vanilla biçimi; renk kodları temizlenir)
+async function oyuncular(ayar) {
+  const c = await calistir('list', ayar);
+  const liste = c.includes(':') ? c.slice(c.indexOf(':') + 1) : '';
+  return liste.split(',').map((x) => x.replace(/§./g, '').replace(/^.*\]\s*/, '').trim()).filter(Boolean);
+}
+const cevrimici = async (nick, ayar) => (await oyuncular(ayar)).some((o) => o.toLowerCase() === String(nick).toLowerCase());
+// Oyuncuya (ya da @a'ya) renkli mesaj: metin JSON olarak kaçışlanır, komuta enjeksiyon yapılamaz
+const tellraw = (hedef, parcalar, ayar) => calistir(`tellraw ${hedef} ${JSON.stringify(parcalar)}`, ayar);
+module.exports = { calistir, hazir, nickGecerli, oyuncular, cevrimici, tellraw };

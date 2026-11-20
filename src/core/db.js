@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS uye (
   guild TEXT, user TEXT,
   xp INTEGER DEFAULT 0, seviye INTEGER DEFAULT 0, para INTEGER DEFAULT 0,
   mesaj INTEGER DEFAULT 0, ses INTEGER DEFAULT 0, rep INTEGER DEFAULT 0,
-  mc_nick TEXT, mc_uuid TEXT,
+  mc_nick TEXT, mc_uuid TEXT, mc_dogrulandi INTEGER DEFAULT 0,
   veri TEXT DEFAULT '{}',
   PRIMARY KEY (guild, user));
 CREATE TABLE IF NOT EXISTS belge (id INTEGER PRIMARY KEY AUTOINCREMENT, guild TEXT, tur TEXT, ref TEXT, veri TEXT, zaman INTEGER);
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS aktivite (guild TEXT, saat INTEGER, mesaj INTEGER DEF
 `);
 
 const q = (s) => sql.prepare(s);
-const SAYISAL = new Set(['xp', 'seviye', 'para', 'mesaj', 'ses', 'rep']);
+const SAYISAL = new Set(['xp', 'seviye', 'para', 'mesaj', 'ses', 'rep', 'mc_dogrulandi']);
 const METIN = new Set(['mc_nick', 'mc_uuid']);
 const belgeAc = (r) => (r ? { id: r.id, guild: r.guild, tur: r.tur, ref: r.ref, zaman: r.zaman, ...JSON.parse(r.veri) } : null);
 
@@ -75,6 +75,7 @@ const db = {
     const u = db.uye(guild, user);
     return q(`SELECT COUNT(*) AS n FROM uye WHERE guild=? AND ${alan} > ?`).get(guild, u[alan]).n + 1;
   },
+  bagliHesaplar: (guild) => q('SELECT * FROM uye WHERE guild=? AND mc_nick IS NOT NULL').all(guild),
   mcBul: (guild, nick) => q('SELECT * FROM uye WHERE guild=? AND lower(mc_nick)=lower(?)').get(guild, nick) || null,
   // --- Belgeler: çekiliş, turnuva, uyarı, hatırlatıcı vb. için genel depo ---
   belge: {

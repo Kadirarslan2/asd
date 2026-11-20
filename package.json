@@ -1,7 +1,7 @@
 {
-  "name": "mc-topluluk-bot",
-  "version": "3.0.0",
-  "description": "Minecraft sunucuları için her şey dahil Discord topluluk botu",
+  "name": "auracraft-bot",
+  "version": "4.0.0",
+  "description": "AuraCraft (auracraft.net.tr) Minecraft sunucusunun Discord botu",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",

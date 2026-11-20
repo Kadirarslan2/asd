@@ -38,15 +38,21 @@ module.exports = {
   uyariEkle,
   komutlar: [
     { data: sebepSec(uyeSec(new SlashCommandBuilder().setName('ban').setDescription('Üyeyi sunucudan yasaklar').setDefaultMemberPermissions(P.BanMembers)))
-        .addIntegerOption((o) => o.setName('mesaj-sil').setDescription('Kaç günlük mesajı silinsin (0-7)').setMinValue(0).setMaxValue(7)),
+        .addIntegerOption((o) => o.setName('mesaj-sil').setDescription('Kaç günlük mesajı silinsin (0-7)').setMinValue(0).setMaxValue(7))
+        .addBooleanOption((o) => o.setName('oyundan-da').setDescription('Bağlı Minecraft hesabını oyundan da yasakla')),
       calistir: async (i) => {
         const u = i.options.getUser('üye'), sebep = i.options.getString('sebep') || 'Belirtilmedi';
         const m = await i.guild.members.fetch(u.id).catch(() => null);
         if (m) { const h = kontrol(i, m); if (h) return hata(i, h); }
         await dm(u, `**${i.guild.name}** sunucusundan yasaklandın.\nSebep: ${sebep}`);
         await i.guild.members.ban(u.id, { reason: `${i.user.tag}: ${sebep}`, deleteMessageSeconds: (i.options.getInteger('mesaj-sil') || 0) * 86400 });
-        await tamam(i, `${u} yasaklandı. Sebep: ${sebep}`);
-        await kayit(i, '🔨 Yasaklama', u, sebep);
+        let oyunNotu = '';
+        const mc = db.uye(i.guild.id, u.id).mc_nick, rcon = require('../core/rcon');
+        if (i.options.getBoolean('oyundan-da') && mc) {
+          oyunNotu = rcon.hazir() ? await rcon.calistir(`ban ${mc} ${require('./oyun').temizSebep(sebep)}`).then(() => `\n🎮 \`${mc}\` oyundan da yasaklandı.`, (e) => `\n⚠️ Oyun yasağı uygulanamadı: ${e.message}`) : '\n⚠️ RCON ayarlı değil; oyun yasağı uygulanamadı.';
+        }
+        await tamam(i, `${u} yasaklandı. Sebep: ${sebep}${oyunNotu}`);
+        await kayit(i, '🔨 Yasaklama', u, sebep, R.hata, oyunNotu);
       } },
     { data: sebepSec(uyeSec(new SlashCommandBuilder().setName('kick').setDescription('Üyeyi sunucudan atar').setDefaultMemberPermissions(P.KickMembers))),
       calistir: async (i) => {

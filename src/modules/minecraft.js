@@ -1,5 +1,5 @@
 // Minecraft: sunucu durumu kartı, canlı panel, açıldı/kapandı bildirimi, IP/oy bağlantıları,
-// hesap bağlama, skin görüntüleme, whitelist başvuruları ve RCON konsolu
+// skin görüntüleme, whitelist başvuruları ve RCON konsolu
 const { SlashCommandBuilder, PermissionFlagsBits: P, ActivityType, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const db = require('../core/db');
 const cizim = require('../core/cizim');
@@ -9,7 +9,9 @@ const { sorgula, adresAyir } = require('../core/sorgu');
 const { log } = require('../core/log');
 const { E, R, yanit, hata, tamam, zd, sayi } = require('../core/util');
 
-const ayar = (g) => db.ayar(g, 'mc', {});
+// Sunucu ayarları: varsayılan AuraCraft (auracraft.net.tr); /mc ayarla ile değişir
+const config = require('../core/config');
+const ayar = (g) => { const a = db.ayar(g, 'mc', {}); return { ...a, ad: a.ad || config.sunucu.ad, adres: a.adres || config.sunucu.adres, tur: a.tur || config.sunucu.tur }; };
 const onbellek = new Map(); // guild -> { t, veri }
 const satir = (...b) => new ActionRowBuilder().addComponents(...b);
 const linkBtn = (ad, url, emoji) => new ButtonBuilder().setLabel(ad).setURL(url).setStyle(ButtonStyle.Link).setEmoji(emoji);
@@ -93,31 +95,11 @@ module.exports = {
         .addStringOption((o) => o.setName('oyuncu').setDescription('Minecraft kullanıcı adı (boşsa bağlı hesabın)').setMaxLength(17)),
       calistir: (i) => {
         const nick = i.options.getString('oyuncu')?.trim() || db.uye(i.guild.id, i.user.id).mc_nick;
-        if (!nick) return hata(i, 'Bir kullanıcı adı yaz ya da `/hesap bağla` ile hesabını bağla.');
+        if (!nick) return hata(i, 'Bir oyuncu adı yaz ya da `/hesap bağla` ile hesabını bağla.');
         if (!rcon.nickGecerli(nick)) return hata(i, 'Geçersiz Minecraft kullanıcı adı.');
         const n = encodeURIComponent(nick);
         return i.reply({ embeds: [E(`🧍 ${nick}`, null, R.ana).setImage(`https://mc-heads.net/body/${n}/300`).setThumbnail(`https://mc-heads.net/avatar/${n}/128`)],
           components: [satir(linkBtn('Skini indir', `https://mc-heads.net/download/${n}`, '⬇️'), linkBtn('NameMC', `https://namemc.com/profile/${n}`, '🔎'))] });
-      } },
-    { data: new SlashCommandBuilder().setName('hesap').setDescription('Minecraft hesabını Discord profiline bağla')
-        .addSubcommand((s) => s.setName('bağla').setDescription('Minecraft kullanıcı adını profiline bağlar').addStringOption((o) => o.setName('oyuncu').setDescription('Minecraft kullanıcı adın').setRequired(true).setMaxLength(17)))
-        .addSubcommand((s) => s.setName('ayır').setDescription('Bağlı hesabı kaldırır'))
-        .addSubcommand((s) => s.setName('bak').setDescription('Bir üyenin bağlı hesabını gösterir').addUserOption((o) => o.setName('üye').setDescription('Üye'))),
-      calistir: async (i) => {
-        const alt = i.options.getSubcommand(), g = i.guild.id;
-        if (alt === 'ayır') { db.uyeYaz(g, i.user.id, { mc_nick: null, mc_uuid: null }); return tamam(i, 'Minecraft hesabının bağlantısı kaldırıldı.', true); }
-        if (alt === 'bak') {
-          const u = i.options.getUser('üye') || i.user, nick = db.uye(g, u.id).mc_nick;
-          if (!nick) return hata(i, `${u.id === i.user.id ? 'Bağlı hesabın yok. `/hesap bağla` kullan.' : 'Bu üyenin bağlı hesabı yok.'}`);
-          return yanit(i, E(null, `🔗 ${u} → **${nick}**`, R.ana).setThumbnail(cizim.kafaUrl(nick)));
-        }
-        const nick = i.options.getString('oyuncu').trim();
-        if (!rcon.nickGecerli(nick)) return hata(i, 'Geçersiz kullanıcı adı. 3-16 karakter; harf, rakam ve alt çizgi (Bedrock için başta nokta olabilir).');
-        const sahip = db.mcBul(g, nick);
-        if (sahip && sahip.user !== i.user.id) return hata(i, 'Bu Minecraft hesabı başka bir üyeye bağlı. Yanlışlık varsa yetkililere yaz.');
-        db.uyeYaz(g, i.user.id, { mc_nick: nick });
-        await yanit(i, E(null, `🔗 **${nick}** hesabı profiline bağlandı. \`/profil\` kartında görünecek.`, R.ok).setThumbnail(cizim.kafaUrl(nick)), true);
-        return oyuncu.basarimVer(i.guild, i.user.id, 'hesap', i.channel);
       } },
     { data: new SlashCommandBuilder().setName('mc').setDescription('[Yönetici] Minecraft sunucu ayarları').setDefaultMemberPermissions(P.ManageGuild)
         .addSubcommand((s) => s.setName('ayarla').setDescription('Sunucu adresini ve bağlantıları ayarlar')

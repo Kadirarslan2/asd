@@ -98,12 +98,15 @@ const hataMi = (i) => i.yanitlar.some((p) => p.flags === MessageFlags.Ephemeral 
 
   console.log('Kurulum');
   await test('/kurulum roller, kategoriler, kanallar ve panelleri kurar; ikinci kez çalışınca tekrar oluşturmaz', async () => {
-    const i = await kos('kurulum', yonetici, { secenek: { ad: 'Örnek Craft' } });
+    assert.deepEqual([config.sunucu.ad, config.sunucu.adres], ['AuraCraft', 'auracraft.net.tr'], 'varsayılan sunucu AuraCraft');
+    const i = await kos('kurulum', yonetici, { secenek: { adres: '127.0.0.1:1' } }); // testte gerçek sunucuya bağlanma
+    assert.equal(require('../src/modules/minecraft').ayar(G).ad, 'AuraCraft');
     assert.ok(!hataMi(i)); png(i.yanitlar[0].files[0]);
-    for (const a of ['kanal.kurallar', 'kanal.duyuru', 'kanal.durum', 'kanal.hosgeldin', 'kanal.log', 'kanal.basvuru', 'kanal.destek', 'kanal.seviye', 'ses.olustur', 'kategori.ticket']) assert.ok(guild.channels.cache.has(db.ayar(G, a)), a);
-    for (const a of ['rol.oyuncu', 'rol.uye', 'rol.destek', 'rol.jail']) assert.ok(guild.roles.cache.has(db.ayar(G, a)), a);
+    for (const a of ['kanal.hesap', 'kanal.kurallar', 'kanal.duyuru', 'kanal.durum', 'kanal.hosgeldin', 'kanal.log', 'kanal.basvuru', 'kanal.destek', 'kanal.seviye', 'ses.olustur', 'kategori.ticket']) assert.ok(guild.channels.cache.has(db.ayar(G, a)), a);
+    for (const a of ['rol.bagli', 'rol.oyuncu', 'rol.uye', 'rol.destek', 'rol.jail']) assert.ok(guild.roles.cache.has(db.ayar(G, a)), a);
     assert.equal(Object.keys(db.ayar(G, 'seviyeRolleri')).length, 6);
     const panel = (a) => guild.channels.cache.get(db.ayar(G, a)).gonderilen;
+    assert.equal(panel('kanal.hesap').length, 1); assert.equal(panel('kanal.hesap')[0].components[0].components.length, 3); assert.ok(db.ayar(G, 'market').some((u) => u.komut), 'hazır oyun içi market ürünleri');
     assert.equal(panel('kanal.kurallar').length, 1); assert.equal(panel('kanal.destek')[0].components[0].components[0].options.length, 5); assert.equal(panel('kanal.basvuruPanel').length, 1);
     const kanalSayisi = guild.channels.cache.size, rolSayisi = guild.roles.cache.size;
     await kos('kurulum', yonetici);
@@ -172,8 +175,7 @@ const hataMi = (i) => i.yanitlar.some((p) => p.flags === MessageFlags.Ephemeral 
     assert.deepEqual([v.surum, v.oyuncu, v.max], ['Bedrock 1.21.50', 12, 60]); assert.match(v.motd, /Bedrock Sunucu/);
   });
   await test('/mc ayarla + /sunucu durum kartı; kapalı sunucuda çevrimdışı kartı; rekor tutulur', async () => {
-    assert.ok(hataMi(await kos('sunucu', ali)), 'adres yokken yönlendirir');
-    await kos('mc', yonetici, { alt: 'ayarla', secenek: { adres: javaAdres, site: 'https://ornek.com' } });
+    await kos('mc', yonetici, { alt: 'ayarla', secenek: { adres: javaAdres, site: 'https://ornek.com', ad: 'Örnek Craft' } });
     const i = await kos('sunucu', ali); png(i.yanitlar[0].files[0]); assert.equal(i.yanitlar[0].components[0].components.length, 3);
     assert.equal(db.ayar(G, 'mc.rekor'), 37);
     const d = await require('../src/modules/minecraft').durumAl(guild); assert.ok(d.acik && d.oyuncu === 37 && d.ad === 'Örnek Craft');
@@ -194,11 +196,15 @@ const hataMi = (i) => i.yanitlar.some((p) => p.flags === MessageFlags.Ephemeral 
   // Sahte RCON sunucusu
   const rconKomutlar = [];
   const paket = (id, tip, govde) => { const g = Buffer.from(govde), b = Buffer.alloc(14 + g.length); b.writeInt32LE(10 + g.length, 0); b.writeInt32LE(id, 4); b.writeInt32LE(tip, 8); g.copy(b, 12); return b; };
-  const rconSrv = net.createServer((c) => { c.on('error', () => {}); c.on('data', (d) => { const id = d.readInt32LE(4), tip = d.readInt32LE(8), govde = d.toString('utf8', 12, d.length - 2); if (tip === 3) return c.write(paket(govde === 'gizli' ? id : -1, 2, '')); rconKomutlar.push(govde); c.write(paket(id, 0, `§aTamam: ${govde}`)); }); });
+  const rconSrv = net.createServer((c) => { c.on('error', () => {}); c.on('data', (d) => { const id = d.readInt32LE(4), tip = d.readInt32LE(8), govde = d.toString('utf8', 12, d.length - 2); if (tip === 3) return c.write(paket(govde === 'gizli' ? id : -1, 2, ''));
+    if (govde === 'list') return c.write(paket(id, 0, `There are ${oyunda.length} of a max of 20 players online: ${oyunda.map((n) => `§7${n}`).join(', ')}`));
+    rconKomutlar.push(govde); c.write(paket(id, 0, `§aTamam: ${govde}`)); }); });
+  const oyunda = ['Veli_MC', 'Ali_MC', 'Can_MC'];
   await new Promise((r) => rconSrv.listen(0, '127.0.0.1', r));
   await test('RCON: komut çalışır, yanlış şifre ve ayarsız durum anlaşılır hata verir', async () => {
     const ayar = { host: '127.0.0.1', port: rconSrv.address().port, sifre: 'gizli' };
-    assert.equal(await rcon.calistir('list', ayar), 'Tamam: list');
+    assert.equal(await rcon.calistir('say selam', ayar), 'Tamam: say selam');
+    assert.deepEqual(await rcon.oyuncular(ayar), ['Veli_MC', 'Ali_MC', 'Can_MC'], 'renk kodları temizlenir');
     await assert.rejects(rcon.calistir('list', { ...ayar, sifre: 'yanlis' }), /şifresi yanlış/);
     await assert.rejects(rcon.calistir('list', { host: '', sifre: '' }), /ayarlı değil/);
     for (const kotu of ['a b', 'x;op', 'ab', '../../x', 'ad\nop']) assert.ok(!rcon.nickGecerli(kotu), kotu);
@@ -219,12 +225,75 @@ const hataMi = (i) => i.yanitlar.some((p) => p.flags === MessageFlags.Ephemeral 
     assert.deepEqual(rconKomutlar, ['whitelist add Veli_MC']); assert.equal(veli.dm.length, 1); assert.equal(db.belge.al(b.id).durum, 'onay');
     assert.match(duzMetin(onay), /Whitelist: Tamam/);
   });
+  console.log('Hesap bağlama');
+  const sonKod = (nick) => { const t = [...rconKomutlar].reverse().find((k) => k.startsWith(`tellraw ${nick} `)); return t && JSON.parse(t.slice(`tellraw ${nick} `.length)).map((p) => p.text).find((x) => /^\d{6}$/.test(x)); };
+  const kodGir = (uye, kod) => bas('hesap', ['kodgir'], uye, { tur: 'modal', alanlar: { kod } });
+  await test('RCON yokken hesap doğrulanmadan bağlanır, ödül verilmez', async () => {
+    const host = config.rcon.host; config.rcon.host = '';
+    const can = guild.members.cache.get('can'), once = db.uye(G, 'can').para;
+    const i = await kos('hesap', can, { alt: 'bağla', secenek: { oyuncu: 'Can_MC' } });
+    config.rcon.host = host;
+    const u = db.uye(G, 'can'); assert.equal(u.mc_nick, 'Can_MC'); assert.equal(u.mc_dogrulandi, 0); assert.equal(u.para, once); assert.match(duzMetin(i), /doğrulanmadı/);
+  });
+  await test('oyunda olmayan oyuncuya kod gönderilmez', async () => {
+    rconKomutlar.length = 0;
+    const i = await kos('hesap', ali, { alt: 'bağla', secenek: { oyuncu: 'Kapali_MC' } });
+    assert.match(duzMetin(i), /Önce oyuna gir/); assert.equal(rconKomutlar.length, 0);
+    assert.ok(hataMi(await kos('hesap', ali, { alt: 'bağla', secenek: { oyuncu: 'a b' } })), 'geçersiz ad');
+  });
+  await test('kod oyuna gider; yanlış kod reddedilir; doğru kodla bağlanır: rol + coin + oyun içi ödül', async () => {
+    rconKomutlar.length = 0;
+    const once = db.uye(G, 'ali').para;
+    const i = await kos('hesap', ali, { alt: 'bağla', secenek: { oyuncu: 'Ali_MC' } });
+    const kod = sonKod('Ali_MC'); assert.ok(kod, 'tellraw ile 6 haneli kod gitmeli'); assert.match(duzMetin(i), /Kod oyuna gönderildi/);
+    assert.ok((await bas('hesap', ['kodgir'], ali)).modal, 'Kodu gir butonu form açar');
+    assert.ok(hataMi(await kodGir(ali, kod === '111111' ? '222222' : '111111')), 'yanlış kod');
+    assert.equal(db.uye(G, 'ali').mc_dogrulandi, 0);
+    const ok = await kodGir(ali, kod);
+    const u = db.uye(G, 'ali'); assert.equal(u.mc_nick, 'Ali_MC'); assert.equal(u.mc_dogrulandi, 1);
+    assert.ok(ali.roles.cache.has(db.ayar(G, 'rol.bagli'))); assert.equal(u.para, once + 1000 + 250, '1000 bağlama ödülü + 250 ilk başarım');
+    for (const k of require('../src/modules/hesap').VARSAYILAN.komutlar) assert.ok(rconKomutlar.includes(k.replace('{oyuncu}', 'Ali_MC')), k);
+    png(ok.yanitlar.at(-1).files[0]); assert.ok(hataMi(await kodGir(ali, kod)), 'kod tek kullanımlık');
+  });
+  await test('ayırıp tekrar bağlayınca ödül ikinci kez verilmez', async () => {
+    await kos('hesap', ali, { alt: 'ayır' }); assert.equal(db.uye(G, 'ali').mc_nick, null); assert.ok(!ali.roles.cache.has(db.ayar(G, 'rol.bagli')));
+    rconKomutlar.length = 0; const once = db.uye(G, 'ali').para;
+    await kos('hesap', ali, { alt: 'bağla', secenek: { oyuncu: 'Ali_MC' } }); await kodGir(ali, sonKod('Ali_MC'));
+    assert.equal(db.uye(G, 'ali').mc_dogrulandi, 1); assert.equal(db.uye(G, 'ali').para, once); assert.ok(!rconKomutlar.some((k) => k.startsWith('give')));
+  });
+  await test('doğrulanmış hesabı başkası alamaz; doğrulanmamış hesabı gerçek sahibi kodla geri alır', async () => {
+    const deniz = sahteUye(guild, 'deniz');
+    assert.ok(hataMi(await kos('hesap', deniz, { alt: 'bağla', secenek: { oyuncu: 'ali_mc' } })), 'doğrulanmış hesap korunur');
+    await kos('hesap', deniz, { alt: 'bağla', secenek: { oyuncu: 'Can_MC' } }); await kodGir(deniz, sonKod('Can_MC'));
+    assert.equal(db.uye(G, 'deniz').mc_nick, 'Can_MC'); assert.equal(db.uye(G, 'can').mc_nick, null, 'doğrulanmamış eski sahip düşer');
+  });
+  await test('/hesap-ayar: ödül komutu {oyuncu} ister, eklenir ve silinir', async () => {
+    assert.ok(hataMi(await kos('hesap-ayar', yonetici, { alt: 'komut-ekle', secenek: { komut: 'give @a diamond 64' } })));
+    await kos('hesap-ayar', yonetici, { alt: 'komut-ekle', secenek: { komut: '/eco give {oyuncu} 500' } });
+    assert.equal(require('../src/modules/hesap').ayar(G).komutlar.at(-1), 'eco give {oyuncu} 500');
+    await kos('hesap-ayar', yonetici, { alt: 'komut-sil', secenek: { sıra: 4 } }); assert.equal(require('../src/modules/hesap').ayar(G).komutlar.length, 3);
+    assert.ok(!hataMi(await kos('hesap-ayar', yonetici, { alt: 'göster' })));
+  });
+  await test('oyun yönetimi: oyuncular listesi, ban (sebep temizlenir), duyuru oyuna gider', async () => {
+    const l = await kos('oyuncular', ali); assert.match(duzMetin(l), /Ali_MC.*<@ali>/);
+    rconKomutlar.length = 0;
+    await kos('oyun', yonetici, { alt: 'ban', secenek: { oyuncu: 'Can_MC', sebep: 'hile\nop yetkisi' } });
+    assert.deepEqual(rconKomutlar, ['ban Can_MC hile op yetkisi']);
+    assert.ok(hataMi(await kos('oyun', yonetici, { alt: 'at', secenek: { oyuncu: 'x;op' } })), 'geçersiz ad');
+    rconKomutlar.length = 0;
+    await kos('duyuru', yonetici, { secenek: { başlık: 'Etkinlik', metin: 'Saat 20:00', 'oyuna-da': true } });
+    assert.equal(rconKomutlar.length, 1); assert.match(rconKomutlar[0], /^tellraw @a .*Saat 20:00/);
+  });
   await test('market: konsol komutlu ürün oyun içinde teslim edilir; hesap bağlı değilse ya da para yoksa satılmaz', async () => {
     assert.ok(hataMi(await kos('market', yonetici, { alt: 'ekle', secenek: { fiyat: 100, ad: 'x', komut: 'give @a diamond 64' } })), '{oyuncu} zorunlu');
     await kos('market', yonetici, { alt: 'ekle', secenek: { fiyat: 100, ad: '5 Elmas', komut: '/give {oyuncu} diamond 5' } });
-    const urun = db.ayar(G, 'market')[0];
-    db.arttir(G, 'ali', 'para', 150); db.arttir(G, 'veli', 'para', 150 - db.uye(G, 'veli').para); // veli'nin bakiyesi tam 150 olsun
-    assert.ok(hataMi(await kos('market', ali, { alt: 'al', secenek: { ürün: urun.id } })), 'hesap bağlı değil'); assert.ok(db.uye(G, 'ali').para >= 150, 'para kesilmedi');
+    const urun = db.ayar(G, 'market').find((u) => u.ad === '5 Elmas');
+    const eda = guild.members.cache.get('eda'); db.arttir(G, 'eda', 'para', 150);
+    assert.ok(hataMi(await kos('market', eda, { alt: 'al', secenek: { ürün: urun.id } })), 'hesap bağlı değil'); assert.equal(db.uye(G, 'eda').para, 150, 'para kesilmedi');
+    assert.equal(db.uye(G, 'veli').mc_dogrulandi, 0);
+    assert.ok(hataMi(await kos('market', veli, { alt: 'al', secenek: { ürün: urun.id } })), 'doğrulanmamış hesaba teslim yok');
+    await kos('hesap', veli, { alt: 'bağla', secenek: { oyuncu: 'Veli_MC' } }); await kodGir(veli, sonKod('Veli_MC'));
+    db.arttir(G, 'veli', 'para', 150 - db.uye(G, 'veli').para); // veli'nin bakiyesi tam 150 olsun
     rconKomutlar.length = 0;
     await kos('market', veli, { alt: 'al', secenek: { ürün: urun.id } });
     assert.deepEqual(rconKomutlar, ['give Veli_MC diamond 5']); assert.equal(db.uye(G, 'veli').para, 50);
@@ -234,12 +303,6 @@ const hataMi = (i) => i.yanitlar.some((p) => p.flags === MessageFlags.Ephemeral 
     const i = await kos('market', veli, { alt: 'al', secenek: { ürün: urun.id } });
     assert.match(duzMetin(i), /iade edildi/); assert.equal(db.uye(G, 'veli').para, 150, 'teslim edilemeyince para iade');
   });
-  await test('/hesap bağla: geçersiz ad ve başkasına bağlı ad reddedilir', async () => {
-    assert.ok(hataMi(await kos('hesap', ali, { alt: 'bağla', secenek: { oyuncu: 'a b' } })));
-    assert.ok(hataMi(await kos('hesap', ali, { alt: 'bağla', secenek: { oyuncu: 'veli_mc' } })), 'büyük/küçük harf fark etmez');
-    await kos('hesap', ali, { alt: 'bağla', secenek: { oyuncu: 'Ali_MC' } }); assert.equal(db.uye(G, 'ali').mc_nick, 'Ali_MC');
-  });
-
   console.log('Destek');
   await test('talep: konu seçilince özel kanal açılır, ikinci talep engellenir', async () => {
     const i = await bas('ticket', ['ac'], ali, { degerler: ['sikayet'] });

@@ -133,9 +133,9 @@ module.exports = {
         const urun = urunler(g).find((u) => u.id === i.options.getString('ürün'));
         if (!urun) return hata(i, 'Ürün bulunamadı. Listeden seç.');
         if (urun.rol && !urun.komut && i.member.roles.cache.has(urun.rol)) return hata(i, 'Bu role zaten sahipsin.');
-        const nick = db.uye(g, i.user.id).mc_nick;
+        const { mc_nick: nick, mc_dogrulandi: dogru } = db.uye(g, i.user.id);
         if (urun.komut) {
-          if (!nick || !rcon.nickGecerli(nick)) return hata(i, 'Bu ürün oyun içinde teslim edilir. Önce `/hesap bağla` ile Minecraft hesabını bağla.');
+          if (!nick || !rcon.nickGecerli(nick) || !dogru) return hata(i, 'Bu ürün oyun içinde teslim edilir. Önce `/hesap bağla` ile Minecraft hesabını **doğrulayarak** bağla.');
           if (!rcon.hazir()) return hata(i, 'Oyun içi teslimat şu an kapalı (RCON ayarlı değil). Yetkililere haber ver.');
         }
         if (!bahisAl(i, urun.fiyat)) return;

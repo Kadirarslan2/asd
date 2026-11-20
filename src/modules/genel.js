@@ -5,21 +5,31 @@ const cizim = require('../core/cizim');
 const { E, R, yanit, hata, tamam, zd, sayi, sureYaz } = require('../core/util');
 
 const KATEGORILER = {
-  '⛏️ Minecraft': ['sunucu', 'ip', 'oy', 'skin', 'hesap'],
+  '⛏️ Minecraft': ['sunucu', 'oyuncular', 'ip', 'oy', 'skin', 'hesap'],
   '📈 Seviye & Profil': ['profil', 'seviye', 'sıralama', 'görevler', 'başarımlar', 'rep'],
   '🪙 Ekonomi': ['bakiye', 'günlük', 'çalış', 'gönder', 'market', 'kumar', 'ödül'],
   '🎲 Eğlence': ['düello', 'tkm', 'aim', 'trivia'],
   '🎵 Müzik & Ses': ['müzik', 'oda'],
   '👥 Topluluk': ['klan', 'anket', 'öneri', 'hatırlat', 'zaman-kapsülü', 'afk', 'doğumgünü', 'davetler'],
   '🛡️ Moderasyon': ['ban', 'kick', 'sustur', 'susturma-kaldır', 'uyar', 'uyarılar', 'uyarı-sil', 'sil', 'jail', 'unjail', 'yavaşmod', 'kilit', 'otomod'],
-  '⚙️ Yönetim': ['kurulum', 'ayar', 'mc', 'duyuru', 'çekiliş', 'ticket-panel', 'kurallar-panel', 'rol-panel', 'seviye-rol', 'karne', 'nabız'],
+  '🎮 Oyun Yönetimi': ['oyun', 'mc', 'hesap-ayar'],
+  '⚙️ Yönetim': ['kurulum', 'ayar', 'duyuru', 'çekiliş', 'ticket-panel', 'kurallar-panel', 'rol-panel', 'seviye-rol', 'karne', 'nabız'],
   'ℹ️ Bilgi': ['yardım', 'ping', 'avatar', 'sunucu-bilgi', 'kullanıcı'],
 };
 const KANAL_AYAR = {
-  log: 'Moderasyon kayıtları', hosgeldin: 'Hoş geldin / güle güle', duyuru: 'Duyurular', durum: 'Sunucu açıldı/kapandı bildirimleri', basvuru: 'Başvurular (yetkili)',
+  log: 'Moderasyon kayıtları', hosgeldin: 'Hoş geldin / güle güle', duyuru: 'Duyurular', durum: 'Sunucu açıldı/kapandı bildirimleri', basvuru: 'Başvurular (yetkili)', hesap: 'Hesap bağlama paneli',
   seviye: 'Seviye ve başarım duyuruları', oneri: 'Öneriler', yildiz: 'Yıldız panosu (⭐)', sayma: 'Sayı sayma oyunu', kelime: 'Kelime zinciri oyunu', dogumgunu: 'Doğum günü kutlamaları',
 };
-const ROL_AYAR = { uye: 'Üye (kuralları kabul eden)', oyuncu: 'Oyuncu (başvurusu onaylanan)', destek: 'Destek ekibi (ticket)', jail: 'Cezalı', oto: 'Yeni üyeye otomatik rol' };
+const ROL_AYAR = { bagli: 'Hesap bağlı (Minecraft hesabını doğrulayan)', uye: 'Üye (kuralları kabul eden)', oyuncu: 'Oyuncu (başvurusu onaylanan)', destek: 'Destek ekibi (ticket)', jail: 'Cezalı', oto: 'Yeni üyeye otomatik rol' };
+// Kurulumda markete konan hazır oyun içi ürünler (RCON ile envantere teslim edilir)
+const VARSAYILAN_MARKET = [
+  { ad: '💎 5 Elmas', fiyat: 2500, komut: 'give {oyuncu} minecraft:diamond 5' },
+  { ad: '🍎 3 Altın Elma', fiyat: 1200, komut: 'give {oyuncu} minecraft:golden_apple 3' },
+  { ad: '🧪 32 Tecrübe Şişesi', fiyat: 900, komut: 'give {oyuncu} minecraft:experience_bottle 32' },
+  { ad: '🥩 32 Pişmiş Biftek', fiyat: 400, komut: 'give {oyuncu} minecraft:cooked_beef 32' },
+  { ad: '🔥 16 Demir Külçe', fiyat: 700, komut: 'give {oyuncu} minecraft:iron_ingot 16' },
+  { ad: '🎆 16 Havai Fişek Roketi', fiyat: 600, komut: 'give {oyuncu} minecraft:firework_rocket 16' },
+];
 const RUTBELER = [[5, 'Odun', 0x9c6b3f], [10, 'Taş', 0x9aa0a6], [20, 'Demir', 0xd8d8d8], [30, 'Altın', 0xffd166], [40, 'Elmas', 0x5eead4], [50, 'Netherite', 0x6b5b73]];
 
 // Tek komutla: roller, kategoriler, kanallar, paneller. Var olanlara dokunmaz, eksikleri tamamlar.
@@ -39,6 +49,7 @@ async function kurulum(i) {
   const destek = await rolAl('rol.destek', { name: 'Destek Ekibi', color: 0x5ad1ff, hoist: true });
   const oyuncu = await rolAl('rol.oyuncu', { name: 'Oyuncu', color: 0x2ee66b, hoist: true });
   await rolAl('rol.uye', { name: 'Üye', color: 0x8fd9a8 });
+  await rolAl('rol.bagli', { name: '🔗 Hesap Bağlı', color: 0x5eead4 });
   const cezali = await rolAl('rol.jail', { name: 'Cezalı', color: 0x555555 });
   const seviyeRol = db.ayar(g.id, 'seviyeRolleri', {});
   for (const [lvl, isim, renk] of RUTBELER) {
@@ -69,6 +80,7 @@ async function kurulum(i) {
   const kDurum = await metin('kanal.durum', '🟢・sunucu-durumu', kBilgi, saltOkunur);
   await metin('kanal.hosgeldin', '👋・hoş-geldin', kBilgi, saltOkunur);
   const kBasvuruPanel = await metin('kanal.basvuruPanel', '📝・başvuru', kBilgi, saltOkunur);
+  const kHesap = await metin('kanal.hesap', '🔗・hesap-bağla', kBilgi, saltOkunur);
 
   const kTopluluk = await kat('kategori.topluluk', '💬 TOPLULUK');
   await metin('kanal.sohbet', '💬・sohbet', kTopluluk);
@@ -101,17 +113,19 @@ async function kurulum(i) {
   if (yeniler.has(kKurallar.id)) await dene('Kurallar paneli', () => require('./karsilama').kurallarPanelGonder(kKurallar));
   if (yeniler.has(kTicket.id)) await dene('Destek paneli', () => require('./ticket').panelGonder(kTicket));
   if (yeniler.has(kBasvuruPanel.id)) await dene('Başvuru paneli', () => mcMod.basvuruPanelGonder(kBasvuruPanel));
+  if (yeniler.has(kHesap.id)) await dene('Hesap bağlama paneli', () => require('./hesap').panelGonder(kHesap));
+  if (db.ayar(g.id, 'market') === null) db.ayarYaz(g.id, 'market', VARSAYILAN_MARKET.map((u, n) => ({ id: `v${n}`, ...u })));
   const mcAdres = mcMod.ayar(g.id).adres;
   if (mcAdres && !db.belge.liste(g.id, 'mcpanel').length) await dene('Durum paneli', () => mcMod.canliPanelKur(g, kDurum));
   if (g.members.me.roles.highest.position <= oyuncu.position) uyarilar.push('Bot rolü yeni rollerin altında kaldı: Sunucu Ayarları → Roller\'den bot rolünü en üste taşı, yoksa rol veremem.');
 
   const kart = await cizim.bannerKart({ ust: 'KURULUM TAMAMLANDI', baslik: mcMod.ayar(g.id).ad || g.name, alt: yapilan.length ? `${yapilan.length} rol ve kanal oluşturuldu` : 'Her şey zaten kuruluydu', logo: true, dosya: 'kurulum' });
   await i.editReply({ files: [kart], embeds: [E(null, (yapilan.length ? `**Oluşturulanlar**\n${yapilan.join(' ').slice(0, 1800)}\n\n` : '') +
-    `**Sıradaki adımlar**\n${mcAdres ? '✅ Sunucu adresi ayarlı, canlı durum paneli kuruldu' : '➡️ `/mc ayarla adres:play.sunucun.com` ile sunucu adresini gir, sonra `/mc panel`'}\n➡️ <@&${destek.id}> rolünü yetkililerine ver\n➡️ \`/mc oy-ekle\` ile oy sitelerini, \`/market ekle\` ile market ürünlerini ekle\n➡️ \`/otomod durum\` ile korumaları gözden geçir` +
+    `**Sıradaki adımlar**\n✅ \`${mcAdres}\` için canlı durum paneli kuruldu\n${require('../core/rcon').hazir() ? '✅ Konsol bağlantısı (RCON) çalışıyor: hesap doğrulama, ödüller ve oyun içi yönetim açık' : '➡️ `.env` dosyasına RCON bilgilerini gir: hesap doğrulama, oyun içi ödüller ve market teslimatı bununla çalışır'}\n➡️ <@&${destek.id}> rolünü yetkililerine ver\n➡️ \`/mc oy-ekle\` ile oy sitelerini, \`/hesap-ayar göster\` ile hesap bağlama ödüllerini kontrol et\n➡️ \`/otomod durum\` ile korumaları gözden geçir` +
     (uyarilar.length ? `\n\n**⚠️ Dikkat**\n${uyarilar.map((u) => `• ${u}`).join('\n')}` : ''), uyarilar.length ? R.altin : R.ok).setImage('attachment://kurulum.png')] });
 }
 
-const sunucuAdi = (g) => db.ayar(g.id, 'mc', {}).ad || g.name;
+const sunucuAdi = (g) => require('./minecraft').ayar(g.id).ad;
 function yardimEmbed(ctx, kategori) {
   if (!kategori) return E(null, 'Aşağıdaki menüden bir **kategori seç**; o kategorideki tüm komutlar açıklamalarıyla listelenir.\n\n' + Object.entries(KATEGORILER).map(([k, v]) => `**${k}** · ${v.length} komut`).join('\n')).setImage('attachment://yardim.png');
   const satirlar = [];
@@ -160,14 +174,20 @@ module.exports = {
     { data: new SlashCommandBuilder().setName('duyuru').setDescription('Duyuru kanalına resimli duyuru gönderir').setDefaultMemberPermissions(P.ManageGuild)
         .addStringOption((o) => o.setName('başlık').setDescription('Başlık').setRequired(true).setMaxLength(60))
         .addStringOption((o) => o.setName('metin').setDescription('Duyuru metni (satır başı için \\n yaz)').setRequired(true).setMaxLength(1800))
-        .addStringOption((o) => o.setName('etiket').setDescription('Kimler etiketlensin').addChoices({ name: 'Kimse', value: 'yok' }, { name: '@everyone', value: 'everyone' }, { name: '@here', value: 'here' })),
+        .addStringOption((o) => o.setName('etiket').setDescription('Kimler etiketlensin').addChoices({ name: 'Kimse', value: 'yok' }, { name: '@everyone', value: 'everyone' }, { name: '@here', value: 'here' }))
+        .addBooleanOption((o) => o.setName('oyuna-da').setDescription('Duyuru oyundaki herkese de gönderilsin (RCON gerekir)')),
       calistir: async (i) => {
         const kanal = i.guild.channels.cache.get(db.ayar(i.guild.id, 'kanal.duyuru')) || i.channel, etiket = i.options.getString('etiket') || 'yok';
         await i.deferReply({ flags: 64 });
         const kart = await cizim.bannerKart({ ust: 'DUYURU', baslik: i.options.getString('başlık'), alt: sunucuAdi(i.guild), logo: true, dosya: 'duyuru' });
         await kanal.send({ content: etiket === 'yok' ? undefined : `@${etiket}`, allowedMentions: { parse: etiket === 'yok' ? [] : ['everyone'] }, files: [kart],
           embeds: [E(null, i.options.getString('metin').replaceAll('\\n', '\n'), R.ana).setImage('attachment://duyuru.png').setFooter({ text: `Duyuran: ${i.member.displayName}` }).setTimestamp()] });
-        return i.editReply(`Duyuru ${kanal} kanalına gönderildi.`);
+        let oyun = '';
+        if (i.options.getBoolean('oyuna-da')) {
+          const rcon = require('../core/rcon');
+          oyun = !rcon.hazir() ? ' ⚠️ RCON ayarlı değil, oyuna gönderilemedi.' : await rcon.tellraw('@a', ['', { text: '\n[DUYURU] ', color: 'green', bold: true }, { text: `${i.options.getString('başlık')}: `, color: 'gold', bold: true }, { text: i.options.getString('metin').replaceAll('\\n', ' ').slice(0, 250), color: 'white' }, { text: '\n' }]).then(() => ' Oyuna da gönderildi.', (e) => ` ⚠️ Oyuna gönderilemedi: ${e.message}`);
+        }
+        return i.editReply(`Duyuru ${kanal} kanalına gönderildi.${oyun}`);
       } },
     { data: new SlashCommandBuilder().setName('ayar').setDescription('Bot ayarları').setDefaultMemberPermissions(P.ManageGuild)
         .addSubcommand((s) => s.setName('kanal').setDescription('Bir özelliğin kanalını ayarlar (kanal boşsa kapatır)')
@@ -184,7 +204,7 @@ module.exports = {
         if (alt === 'göster') {
           const k = Object.entries(KANAL_AYAR).map(([a, ad]) => `${ad}: ${db.ayar(g, `kanal.${a}`) ? `<#${db.ayar(g, `kanal.${a}`)}>` : '—'}`);
           const r = Object.entries(ROL_AYAR).map(([a, ad]) => `${ad}: ${db.ayar(g, `rol.${a}`) ? `<@&${db.ayar(g, `rol.${a}`)}>` : '—'}`);
-          const mc = db.ayar(g, 'mc', {});
+          const mc = require('./minecraft').ayar(g);
           return yanit(i, E('⚙️ Ayarlar', [`**Minecraft:** ${mc.adres ? `\`${mc.adres}\` (${mc.tur || 'java'})` : '— (`/mc ayarla`)'}`, `**Oda oluşturma kanalı:** ${db.ayar(g, 'ses.olustur') ? `<#${db.ayar(g, 'ses.olustur')}>` : '—'}`, '', ...k, '', ...r].join('\n'), R.bilgi), true);
         }
         if (alt === 'mesaj') { db.ayarYaz(g, 'hosgeldin.mesaj', i.options.getString('metin')); return tamam(i, 'Hoş geldin mesajı güncellendi.', true); }

@@ -10,6 +10,7 @@ module.exports = {
   kok,
   token: process.env.DISCORD_TOKEN || '',
   guildId: process.env.GUILD_ID || '',
+  sunucu: { ad: process.env.MC_AD || 'AuraCraft', adres: process.env.MC_ADRES || 'auracraft.net.tr', tur: process.env.MC_TUR === 'bedrock' ? 'bedrock' : 'java' },
   rcon: { host: process.env.MC_RCON_HOST || '', port: Number(process.env.MC_RCON_PORT || 25575), sifre: process.env.MC_RCON_PASSWORD || '' },
   dbYol: process.env.DB_PATH || path.join(kok, 'data', 'bot.sqlite'),
 };
